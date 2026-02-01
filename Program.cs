@@ -206,7 +206,7 @@ namespace Scalpel.Enterprise
 
         private Dictionary<string, List<string>> BuildCommitToRequirementsMap()
         {
-            var logLines = RunGitCommand("log --oneline --all");
+            var logLines = RunGitCommand("log --pretty=format:\"%H %s\" --all");
             if (string.IsNullOrWhiteSpace(logLines))
             {
                 return new Dictionary<string, List<string>>();
@@ -219,8 +219,9 @@ namespace Scalpel.Enterprise
             {
                 var matches = _config.RequirementRegex.Matches(line);
                 if (matches.Count == 0) continue;
+                if (line.Length < 40) continue;
 
-                var commitHash = line.Split(' ')[0];
+                var commitHash = line.Substring(0, 40);
                 var requirements = matches.Select(m => m.Value).Distinct().ToList();
                 commitToRequirements[commitHash] = requirements;
             }
@@ -599,7 +600,7 @@ namespace Scalpel.Enterprise
             var diffOutput = RunGitCommand($"show {commitHash}");
             var changedLineRanges = new List<(int start, int end)>();
 
-            foreach (var line in diffOutput.Split('\n'))
+            foreach (var line in diffOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 if (line.StartsWith("@@"))
                 {
@@ -780,7 +781,7 @@ namespace Scalpel.Enterprise
             
             // Use git show with --name-only for multiple commits
             // Format: commit hash on one line, files on subsequent lines, separated by empty line
-            var output = RunGitCommand($"show --pretty=format:%H --name-only --no-patch {commits}");
+            var output = RunGitCommand($"show --pretty=format:%H --name-only {commits}");
             
             if (string.IsNullOrWhiteSpace(output))
             {
@@ -859,8 +860,8 @@ CONFIG:
 
     public class Configuration
     {
-        public string DefaultRequirementId { get; set; } = "Req111";
-        public string RequirementPattern { get; set; } = @"Req\d+";
+        public string DefaultRequirementId { get; set; } = "REQ-111";
+        public string RequirementPattern { get; set; } = @"(?i)Req-\d+";
         public Regex RequirementRegex => new Regex(RequirementPattern);
         public string OutputDirectory { get; set; } = "./scalpel-reports";
         public string[] ExcludePatterns { get; set; } = { "**/bin/**", "**/obj/**", "**/packages/**" };
