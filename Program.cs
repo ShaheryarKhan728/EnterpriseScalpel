@@ -71,8 +71,9 @@ namespace Scalpel.Enterprise
             _logger.Info("Starting comprehensive analysis...");
             
             var commitToReqs = BuildCommitToRequirementsMap();
-            var fileToReqs = BuildFileToRequirementsMap(commitToReqs);
-            var methodToReqs = BuildMethodToRequirementsMap(commitToReqs);
+            var allCommitFiles = GetAllCommitFiles(commitToReqs.Keys);
+            var fileToReqs = BuildFileToRequirementsMap(commitToReqs, allCommitFiles);
+            var methodToReqs = BuildMethodToRequirementsMap(commitToReqs, allCommitFiles);
             
             var analysis = new AnalysisResult
             {
@@ -227,86 +228,86 @@ namespace Scalpel.Enterprise
             return commitToRequirements;
         }
 
-        private Dictionary<string, HashSet<string>> BuildFileToRequirementsMap(
-            Dictionary<string, List<string>> commitToRequirements)
-        {
-            commitToRequirements ??= BuildCommitToRequirementsMap();
-            var fileToRequirements = new Dictionary<string, HashSet<string>>();
+        // private Dictionary<string, HashSet<string>> BuildFileToRequirementsMap(
+        //     Dictionary<string, List<string>> commitToRequirements)
+        // {
+        //     commitToRequirements ??= BuildCommitToRequirementsMap();
+        //     var fileToRequirements = new Dictionary<string, HashSet<string>>();
 
-            foreach (var (commitHash, requirements) in commitToRequirements)
-            {
-                var filesChanged = GetFilesChangedInCommit(commitHash);
+        //     foreach (var (commitHash, requirements) in commitToRequirements)
+        //     {
+        //         var filesChanged = GetFilesChangedInCommit(commitHash);
 
-                foreach (var file in filesChanged)
-                {
-                    if (!fileToRequirements.ContainsKey(file))
-                    {
-                        fileToRequirements[file] = new HashSet<string>();
-                    }
+        //         foreach (var file in filesChanged)
+        //         {
+        //             if (!fileToRequirements.ContainsKey(file))
+        //             {
+        //                 fileToRequirements[file] = new HashSet<string>();
+        //             }
 
-                    foreach (var req in requirements)
-                    {
-                        fileToRequirements[file].Add(req);
-                    }
-                }
-            }
+        //             foreach (var req in requirements)
+        //             {
+        //                 fileToRequirements[file].Add(req);
+        //             }
+        //         }
+        //     }
 
-            return fileToRequirements;
-        }
+        //     return fileToRequirements;
+        // }
 
-        private Dictionary<string, MethodInfo> BuildMethodToRequirementsMap(
-            Dictionary<string, List<string>> commitToRequirements)
-        {
-            var methodToReqs = new Dictionary<string, MethodInfo>();
+        // private Dictionary<string, MethodInfo> BuildMethodToRequirementsMap(
+        //     Dictionary<string, List<string>> commitToRequirements)
+        // {
+        //     var methodToReqs = new Dictionary<string, MethodInfo>();
             
-            foreach (var (commitHash, requirements) in commitToRequirements)
-            {
-                var filesChanged = GetFilesChangedInCommit(commitHash);
-                var changedLineRanges = GetChangedLineRanges(commitHash);
+        //     foreach (var (commitHash, requirements) in commitToRequirements)
+        //     {
+        //         var filesChanged = GetFilesChangedInCommit(commitHash);
+        //         var changedLineRanges = GetChangedLineRanges(commitHash);
 
-                foreach (var file in filesChanged.Where(f => f.EndsWith(".cs")))
-                {
-                    var absolutePath = Path.Combine(Directory.GetCurrentDirectory(), file);
-                    if (!File.Exists(absolutePath)) continue;
+        //         foreach (var file in filesChanged.Where(f => f.EndsWith(".cs")))
+        //         {
+        //             var absolutePath = Path.Combine(Directory.GetCurrentDirectory(), file);
+        //             if (!File.Exists(absolutePath)) continue;
 
-                    var methods = GetMethodsFromFile(absolutePath);
+        //             var methods = GetMethodsFromFile(absolutePath);
 
-                    foreach (var method in methods)
-                    {
-                        var (methodStart, methodEnd) = GetMethodLineRange(method);
+        //             foreach (var method in methods)
+        //             {
+        //                 var (methodStart, methodEnd) = GetMethodLineRange(method);
                         
-                        foreach (var change in changedLineRanges)
-                        {
-                            if (Overlaps((methodStart, methodEnd), change))
-                            {
-                                var key = $"{file}::{method.Identifier.Text}";
+        //                 foreach (var change in changedLineRanges)
+        //                 {
+        //                     if (Overlaps((methodStart, methodEnd), change))
+        //                     {
+        //                         var key = $"{file}::{method.Identifier.Text}";
                                 
-                                if (!methodToReqs.ContainsKey(key))
-                                {
-                                    methodToReqs[key] = new MethodInfo
-                                    {
-                                        FilePath = file,
-                                        MethodName = method.Identifier.Text,
-                                        Requirements = new HashSet<string>(),
-                                        ChangeCount = 0,
-                                        LineStart = methodStart,
-                                        LineEnd = methodEnd
-                                    };
-                                }
+        //                         if (!methodToReqs.ContainsKey(key))
+        //                         {
+        //                             methodToReqs[key] = new MethodInfo
+        //                             {
+        //                                 FilePath = file,
+        //                                 MethodName = method.Identifier.Text,
+        //                                 Requirements = new HashSet<string>(),
+        //                                 ChangeCount = 0,
+        //                                 LineStart = methodStart,
+        //                                 LineEnd = methodEnd
+        //                             };
+        //                         }
 
-                                foreach (var req in requirements)
-                                {
-                                    methodToReqs[key].Requirements.Add(req);
-                                }
-                                methodToReqs[key].ChangeCount++;
-                            }
-                        }
-                    }
-                }
-            }
+        //                         foreach (var req in requirements)
+        //                         {
+        //                             methodToReqs[key].Requirements.Add(req);
+        //                         }
+        //                         methodToReqs[key].ChangeCount++;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
 
-            return methodToReqs;
-        }
+        //     return methodToReqs;
+        // }
 
         private List<string> GetCommitsForRequirement(string requirementId)
         {
@@ -679,6 +680,146 @@ namespace Scalpel.Enterprise
                 _logger.Error($"Failed to run git command: {ex.Message}");
                 return string.Empty;
             }
+        }
+
+        private Dictionary<string, HashSet<string>> BuildFileToRequirementsMap(
+            Dictionary<string, List<string>> commitToRequirements,
+            Dictionary<string, string[]> allCommitFiles = null)
+        {
+            commitToRequirements ??= BuildCommitToRequirementsMap();
+            allCommitFiles ??= GetAllCommitFiles(commitToRequirements.Keys);
+            
+            var fileToRequirements = new Dictionary<string, HashSet<string>>();
+
+            foreach (var (commitHash, requirements) in commitToRequirements)
+            {
+                if (!allCommitFiles.ContainsKey(commitHash)) continue;
+                
+                var filesChanged = allCommitFiles[commitHash];
+
+                foreach (var file in filesChanged)
+                {
+                    if (!fileToRequirements.ContainsKey(file))
+                    {
+                        fileToRequirements[file] = new HashSet<string>();
+                    }
+
+                    foreach (var req in requirements)
+                    {
+                        fileToRequirements[file].Add(req);
+                    }
+                }
+            }
+
+            return fileToRequirements;
+        }
+
+        private Dictionary<string, MethodInfo> BuildMethodToRequirementsMap(
+            Dictionary<string, List<string>> commitToRequirements,
+            Dictionary<string, string[]> allCommitFiles = null)
+        {
+            allCommitFiles ??= GetAllCommitFiles(commitToRequirements.Keys);
+            var methodToReqs = new Dictionary<string, MethodInfo>();
+            
+            foreach (var (commitHash, requirements) in commitToRequirements)
+            {
+                if (!allCommitFiles.ContainsKey(commitHash)) continue;
+                
+                var filesChanged = allCommitFiles[commitHash];
+                var changedLineRanges = GetChangedLineRanges(commitHash);
+
+                foreach (var file in filesChanged.Where(f => f.EndsWith(".cs")))
+                {
+                    var absolutePath = Path.Combine(Directory.GetCurrentDirectory(), file);
+                    if (!File.Exists(absolutePath)) continue;
+
+                    var methods = GetMethodsFromFile(absolutePath);
+
+                    foreach (var method in methods)
+                    {
+                        var (methodStart, methodEnd) = GetMethodLineRange(method);
+                        
+                        foreach (var change in changedLineRanges)
+                        {
+                            if (Overlaps((methodStart, methodEnd), change))
+                            {
+                                var key = $"{file}::{method.Identifier.Text}";
+                                
+                                if (!methodToReqs.ContainsKey(key))
+                                {
+                                    methodToReqs[key] = new MethodInfo
+                                    {
+                                        FilePath = file,
+                                        MethodName = method.Identifier.Text,
+                                        Requirements = new HashSet<string>(),
+                                        ChangeCount = 0,
+                                        LineStart = methodStart,
+                                        LineEnd = methodEnd
+                                    };
+                                }
+
+                                foreach (var req in requirements)
+                                {
+                                    methodToReqs[key].Requirements.Add(req);
+                                }
+                                methodToReqs[key].ChangeCount++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return methodToReqs;
+        }
+
+        // New method: single git call for all commits
+        private Dictionary<string, string[]> GetAllCommitFiles(IEnumerable<string> commitHashes)
+        {
+            var result = new Dictionary<string, string[]>();
+            var commits = string.Join(" ", commitHashes);
+            
+            // Use git show with --name-only for multiple commits
+            // Format: commit hash on one line, files on subsequent lines, separated by empty line
+            var output = RunGitCommand($"show --pretty=format:%H --name-only --no-patch {commits}");
+            
+            if (string.IsNullOrWhiteSpace(output))
+            {
+                return result;
+            }
+
+            var lines = output.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            string currentCommit = null;
+            var currentFiles = new List<string>();
+
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+                
+                // Check if this line is a commit hash (40 hex characters)
+                if (trimmed.Length == 40 && Regex.IsMatch(trimmed, "^[0-9a-f]{40}$"))
+                {
+                    // Save previous commit's files
+                    if (currentCommit != null && currentFiles.Any())
+                    {
+                        result[currentCommit] = currentFiles.ToArray();
+                    }
+                    
+                    currentCommit = trimmed;
+                    currentFiles = new List<string>();
+                }
+                else if (!string.IsNullOrWhiteSpace(trimmed))
+                {
+                    currentFiles.Add(trimmed);
+                }
+            }
+            
+            // Don't forget the last commit
+            if (currentCommit != null && currentFiles.Any())
+            {
+                result[currentCommit] = currentFiles.ToArray();
+            }
+
+            return result;
         }
 
         private void ShowHelp()
