@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnterpriseScalpel", "EnterpriseScalpel.csproj", "{E834A6DA-B039-7F9F-6A68-85720B391FA2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E834A6DA-B039-7F9F-6A68-85720B391FA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E834A6DA-B039-7F9F-6A68-85720B391FA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E834A6DA-B039-7F9F-6A68-85720B391FA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E834A6DA-B039-7F9F-6A68-85720B391FA2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AB540437-4D57-4E44-B935-7F6DCDEC7BAF}
+	EndGlobalSection
+EndGlobal
