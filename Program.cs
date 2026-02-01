@@ -718,7 +718,7 @@ CONFIG:
 
     public class Configuration
     {
-        public string DefaultRequirementId { get; set; } = "Req1";
+        public string DefaultRequirementId { get; set; } = "Req111";
         public string RequirementPattern { get; set; } = @"Req\d+";
         public Regex RequirementRegex => new Regex(RequirementPattern);
         public string OutputDirectory { get; set; } = "./scalpel-reports";
