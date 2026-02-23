@@ -42,8 +42,24 @@ namespace Scalpel.Enterprise
             switch (command)
             {
                 case "analyze":
-                    var reqId = args.Length > 1 ? args[1] : null;
-                    AnalyzeRequirement(reqId);
+                    // Parse: analyze [--repos <repo1,repo2,...>] [reqId]
+                    var repositories = new List<string>();
+                    string requirementId = null;
+                    
+                    for (int i = 1; i < args.Length; i++)
+                    {
+                        if (args[i] == "--repos" && i + 1 < args.Length)
+                        {
+                            repositories.AddRange(args[i + 1].Split(',').Select(r => r.Trim()));
+                            i++;
+                        }
+                        else if (!args[i].StartsWith("--"))
+                        {
+                            requirementId = args[i];
+                        }
+                    }
+                    
+                    AnalyzeWithRepositories(repositories, requirementId);
                     break;
                 case "impact":
                     if (args.Length < 2)
@@ -116,6 +132,247 @@ namespace Scalpel.Enterprise
             };
 
             DisplayRequirementImpact(impact);
+        }
+
+        private void AnalyzeWithRepositories(List<string> repositories, string requirementId)
+        {
+            _logger.Info($"Analyzing {(repositories.Count > 0 ? repositories.Count + " repositories" : "current repository")}...");
+            
+            // If no repositories specified, use current directory
+            if (repositories.Count == 0)
+            {
+                repositories.Add(Directory.GetCurrentDirectory());
+            }
+
+            var allAnalysisResults = new List<AnalysisResult>();
+            var originalDirectory = Directory.GetCurrentDirectory();
+
+            try
+            {
+                foreach (var repo in repositories)
+                {
+                    _logger.Info($"Processing repository: {repo}");
+                    
+                    // Check if repo is a URL or local path
+                    if (IsRepositoryUrl(repo))
+                    {
+                        // Clone the repository to a temporary location
+                        var tempDir = CloneRepository(repo);
+                        if (string.IsNullOrEmpty(tempDir))
+                        {
+                            _logger.Warning($"Failed to clone repository: {repo}");
+                            continue;
+                        }
+                        Directory.SetCurrentDirectory(tempDir);
+                    }
+                    else if (Directory.Exists(repo))
+                    {
+                        // Use local repository
+                        Directory.SetCurrentDirectory(repo);
+                    }
+                    else
+                    {
+                        _logger.Warning($"Repository not found: {repo}");
+                        continue;
+                    }
+
+                    // Perform analysis
+                    if (string.IsNullOrEmpty(requirementId))
+                    {
+                        // Complete analysis if no requirement ID specified
+                        _logger.Info("Performing complete analysis (no requirement ID specified)...");
+                        var analysis = PerformCompleteAnalysis();
+                        allAnalysisResults.Add(analysis);
+                    }
+                    else
+                    {
+                        // Analyze specific requirement
+                        var analysis = AnalyzeRequirementInRepository(requirementId);
+                        if (analysis != null)
+                        {
+                            allAnalysisResults.Add(analysis);
+                        }
+                    }
+                }
+
+                // Merge and display results from all repositories
+                if (allAnalysisResults.Count > 0)
+                {
+                    var mergedAnalysis = MergeAnalysisResults(allAnalysisResults);
+                    DisplayAnalysis(mergedAnalysis);
+                    ExportResults(mergedAnalysis);
+                }
+                else
+                {
+                    _logger.Warning("No analysis results to display");
+                }
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(originalDirectory);
+            }
+        }
+
+        private bool IsRepositoryUrl(string repository)
+        {
+            return repository.StartsWith("http://") || 
+                   repository.StartsWith("https://") ||
+                   repository.StartsWith("git@") ||
+                   repository.EndsWith(".git");
+        }
+
+        private string CloneRepository(string repositoryUrl)
+        {
+            try
+            {
+                var tempDir = Path.Combine(Path.GetTempPath(), "scalpel-" + Guid.NewGuid().ToString().Substring(0, 8));
+                Directory.CreateDirectory(tempDir);
+                
+                _logger.Info($"Cloning repository to: {tempDir}");
+                
+                var process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "git",
+                        Arguments = $"clone {repositoryUrl} {tempDir}",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+
+                process.Start();
+                process.WaitForExit();
+
+                if (process.ExitCode == 0)
+                {
+                    _logger.Success($"Repository cloned successfully");
+                    return tempDir;
+                }
+                else
+                {
+                    var error = process.StandardError.ReadToEnd();
+                    _logger.Error($"Failed to clone repository: {error}");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Exception while cloning repository: {ex.Message}");
+                return null;
+            }
+        }
+
+        private AnalysisResult PerformCompleteAnalysis()
+        {
+            _logger.Info("Starting comprehensive repository analysis...");
+            
+            var commitToReqs = BuildCommitToRequirementsMap();
+            var allCommitFiles = GetAllCommitFiles(commitToReqs.Keys);
+            var fileToReqs = BuildFileToRequirementsMap(commitToReqs, allCommitFiles);
+            var methodToReqs = BuildMethodToRequirementsMap(commitToReqs, allCommitFiles);
+            
+            var analysis = new AnalysisResult
+            {
+                CommitToRequirements = commitToReqs,
+                FileToRequirements = fileToReqs,
+                MethodToRequirements = methodToReqs,
+                AnalysisDate = DateTime.Now,
+                RepositoryPath = Directory.GetCurrentDirectory()
+            };
+
+            return analysis;
+        }
+
+        private AnalysisResult AnalyzeRequirementInRepository(string requirementId)
+        {
+            _logger.Info($"Analyzing requirement: {requirementId}");
+            
+            var commits = GetCommitsForRequirement(requirementId);
+            if (commits.Count == 0)
+            {
+                _logger.Warning($"No commits found for {requirementId}");
+                return null;
+            }
+
+            var commitToReqs = BuildCommitToRequirementsMap();
+            var allCommitFiles = GetAllCommitFiles(commitToReqs.Keys);
+            var fileToReqs = BuildFileToRequirementsMap(commitToReqs, allCommitFiles);
+
+            var filteredFileToReqs = new Dictionary<string, HashSet<string>>();
+            foreach (var file in fileToReqs)
+            {
+                if (file.Value.Contains(requirementId))
+                {
+                    filteredFileToReqs[file.Key] = file.Value;
+                }
+            }
+
+            var analysis = new AnalysisResult
+            {
+                CommitToRequirements = commitToReqs.Where(c => c.Value.Contains(requirementId))
+                    .ToDictionary(x => x.Key, x => x.Value),
+                FileToRequirements = filteredFileToReqs,
+                MethodToRequirements = BuildMethodToRequirementsMap(commitToReqs, allCommitFiles),
+                AnalysisDate = DateTime.Now,
+                RepositoryPath = Directory.GetCurrentDirectory(),
+                FilteredByRequirementId = requirementId
+            };
+
+            return analysis;
+        }
+
+        private AnalysisResult MergeAnalysisResults(List<AnalysisResult> results)
+        {
+            var mergedAnalysis = new AnalysisResult
+            {
+                CommitToRequirements = new Dictionary<string, List<string>>(),
+                FileToRequirements = new Dictionary<string, HashSet<string>>(),
+                MethodToRequirements = new Dictionary<string, MethodInfo>(),
+                AnalysisDate = DateTime.Now,
+                RepositoryPaths = results.Select(r => r.RepositoryPath).ToList()
+            };
+
+            foreach (var result in results)
+            {
+                // Merge commits (with repo prefix to avoid duplicates)
+                var repoPrefix = Path.GetFileName(result.RepositoryPath) ?? "repo";
+                foreach (var (commit, reqs) in result.CommitToRequirements)
+                {
+                    var key = $"{repoPrefix}:{commit}";
+                    mergedAnalysis.CommitToRequirements[key] = reqs;
+                }
+
+                // Merge files
+                foreach (var (file, reqs) in result.FileToRequirements)
+                {
+                    var key = $"{repoPrefix}/{file}";
+                    if (!mergedAnalysis.FileToRequirements.ContainsKey(key))
+                    {
+                        mergedAnalysis.FileToRequirements[key] = new HashSet<string>();
+                    }
+                    foreach (var req in reqs)
+                    {
+                        mergedAnalysis.FileToRequirements[key].Add(req);
+                    }
+                }
+
+                // Merge methods
+                foreach (var (method, info) in (result.MethodToRequirements ?? new Dictionary<string, MethodInfo>()))
+                {
+                    var key = $"{repoPrefix}/{info.FilePath}::{info.MethodName}";
+                    if (!mergedAnalysis.MethodToRequirements.ContainsKey(key))
+                    {
+                        var newInfo = (MethodInfo)info.Clone();
+                        newInfo.FilePath = $"{repoPrefix}/{info.FilePath}";
+                        mergedAnalysis.MethodToRequirements[key] = newInfo;
+                    }
+                }
+            }
+
+            return mergedAnalysis;
         }
 
         private void AnalyzeFileImpact(string filePath)
@@ -467,33 +724,33 @@ namespace Scalpel.Enterprise
 
         private void ExportResults(AnalysisResult analysis)
         {
-            var outputDir = _config.OutputDirectory;
+            var outputDir = Path.GetFullPath(_config.OutputDirectory);
             Directory.CreateDirectory(outputDir);
             
-            ExportToJson(analysis);
-            ExportToHtml(analysis);
-            ExportToMarkdown(analysis);
+            ExportToJson(analysis, outputDir);
+            ExportToHtml(analysis, outputDir);
+            ExportToMarkdown(analysis, outputDir);
             
             _logger.Success($"Reports exported to: {outputDir}");
         }
 
-        private void ExportToJson(AnalysisResult analysis)
+        private void ExportToJson(AnalysisResult analysis, string outputDir = "")
         {
             var json = JsonSerializer.Serialize(analysis, new JsonSerializerOptions { WriteIndented = true });
-            var path = Path.Combine(_config.OutputDirectory, "traceability-report.json");
+            var path = Path.Combine(outputDir, "traceability-report.json");
             File.WriteAllText(path, json);
             _logger.Success($"JSON report: {path}");
         }
 
-        private void ExportToHtml(AnalysisResult analysis)
+        private void ExportToHtml(AnalysisResult analysis, string outputDir = "")
         {
             var html = GenerateHtmlReport(analysis);
-            var path = Path.Combine(_config.OutputDirectory, "traceability-report.html");
+            var path = Path.Combine(outputDir, "traceability-report.html");
             File.WriteAllText(path, html);
             _logger.Success($"HTML report: {path}");
         }
 
-        private void ExportToCsv(AnalysisResult analysis)
+        private void ExportToCsv(AnalysisResult analysis, string outputDir = "")
         {
             var csv = new System.Text.StringBuilder();
             csv.AppendLine("File,Requirements,Risk Level,Change Count");
@@ -505,12 +762,12 @@ namespace Scalpel.Enterprise
                 csv.AppendLine($"\"{entry.Key}\",\"{reqs}\",\"{riskLevel}\",{entry.Value.Count}");
             }
             
-            var path = Path.Combine(_config.OutputDirectory, "traceability-report.csv");
+            var path = Path.Combine(outputDir, "traceability-report.csv");
             File.WriteAllText(path, csv.ToString());
             _logger.Success($"CSV report: {path}");
         }
 
-        private void ExportToMarkdown(AnalysisResult analysis)
+        private void ExportToMarkdown(AnalysisResult analysis, string outputDir = "")
         {
             var md = new System.Text.StringBuilder();
             md.AppendLine("# Requirement Traceability Report");
@@ -529,7 +786,7 @@ namespace Scalpel.Enterprise
                 md.AppendLine($"| {file.Key} | {string.Join(", ", file.Value)} | {file.Value.Count} |");
             }
             
-            var path = Path.Combine(_config.OutputDirectory, "traceability-report.md");
+            var path = Path.Combine(outputDir, "traceability-report.md");
             File.WriteAllText(path, md.ToString());
             _logger.Success($"Markdown report: {path}");
         }
@@ -835,16 +1092,36 @@ USAGE:
   scalpel [command] [options]
 
 COMMANDS:
-  analyze [reqId]        Analyze specific requirement (default: from config)
-  impact <filepath>      Show impact analysis for a specific file
-  report <format>        Generate report (html|json|csv|markdown)
-  hotspots              Find code hotspots (high change + complexity)
+  analyze [options] [reqId]  Analyze requirement(s) in repository/-ies
+  impact <filepath>          Show impact analysis for a specific file
+  report <format>            Generate report (html|json|csv|markdown)
+  hotspots                  Find code hotspots (high change + complexity)
+
+ANALYSIS OPTIONS:
+  --repos <repo1,repo2,...>  Specify multiple repository URLs or paths
+                             (comma-separated, no spaces after commas)
+                             If omitted, uses current directory
+  
+  reqId (optional)           Analyze specific requirement across repositories
+                             If omitted, performs complete analysis
 
 EXAMPLES:
-  scalpel analyze Req123
+  scalpel                                       (Full analysis of current repo)
+  scalpel analyze --repos /path/to/repo1,/path/to/repo2
+                                               (Full analysis of multiple repos)
+  scalpel analyze Req123                        (Requirement in current repo)
+  scalpel analyze --repos /path/to/repo1,/path/to/repo2 Req123
+                                               (Requirement across multiple repos)
+  scalpel analyze --repos https://github.com/org/repo.git,https://github.com/org/repo2.git Req456
+                                               (Requirement across remote repos)
   scalpel impact Services/PaymentService.cs
   scalpel report html
   scalpel hotspots
+
+REPOSITORY FORMATS:
+  Local paths:     /absolute/path  or  C:\Windows\path
+  Remote URLs:     https://github.com/org/repo.git
+  Git SSH:         git@github.com:org/repo.git
 
 CONFIG:
   Edit scalpel.config.json to customize:
@@ -863,11 +1140,12 @@ CONFIG:
         public string DefaultRequirementId { get; set; } = "REQ-111";
         public string RequirementPattern { get; set; } = @"(?i)Req-\d+";
         public Regex RequirementRegex => new Regex(RequirementPattern);
-        public string OutputDirectory { get; set; } = "./scalpel-reports";
+        public string OutputDirectory { get; set; } = "scalpel-reports";
         public string[] ExcludePatterns { get; set; } = { "**/bin/**", "**/obj/**", "**/packages/**" };
         public int RiskThresholdLow { get; set; } = 1;
         public int RiskThresholdMedium { get; set; } = 3;
         public int RiskThresholdHigh { get; set; } = 5;
+
 
         public static Configuration LoadFromFile(string path)
         {
@@ -887,6 +1165,8 @@ CONFIG:
         public Dictionary<string, MethodInfo> MethodToRequirements { get; set; }
         public DateTime AnalysisDate { get; set; }
         public string RepositoryPath { get; set; }
+        public List<string> RepositoryPaths { get; set; } // For multiple repositories
+        public string FilteredByRequirementId { get; set; } // If analysis is filtered by a specific requirement
     }
 
     public class RequirementImpact
@@ -907,6 +1187,19 @@ CONFIG:
         public int ChangeCount { get; set; }
         public int LineStart { get; set; }
         public int LineEnd { get; set; }
+
+        public object Clone()
+        {
+            return new MethodInfo
+            {
+                FilePath = this.FilePath,
+                MethodName = this.MethodName,
+                Requirements = new HashSet<string>(this.Requirements ?? new HashSet<string>()),
+                ChangeCount = this.ChangeCount,
+                LineStart = this.LineStart,
+                LineEnd = this.LineEnd
+            };
+        }
     }
 
     public class Hotspot
