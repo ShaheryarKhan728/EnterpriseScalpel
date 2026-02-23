@@ -1,6 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -26,8 +29,16 @@ namespace Scalpel.Enterprise
             var logger = new ConsoleLogger();
             var scalpel = new EnterpriseScalpel(config, logger);
 
+            // If invoked with `serve` or `web`, start minimal web server with UI + API
             if (args.Length > 0)
             {
+                var first = args[0].ToLower();
+                if (first == "serve" || first == "web")
+                {
+                    scalpel.StartWebHost();
+                    return;
+                }
+
                 scalpel.ExecuteCommand(args);
             }
             else
@@ -322,6 +333,160 @@ namespace Scalpel.Enterprise
             };
 
             return analysis;
+        }
+
+        // Public API-friendly method to analyze repositories and return merged AnalysisResult
+        public AnalysisResult AnalyzeRepositoriesForApi(List<string> repositories, string requirementId)
+        {
+            _logger.Info($"API: Analyzing {(repositories?.Count > 0 ? repositories.Count + " repositories" : "current repository")}...");
+
+            if (repositories == null || repositories.Count == 0)
+            {
+                repositories = new List<string> { Directory.GetCurrentDirectory() };
+            }
+
+            var allAnalysisResults = new List<AnalysisResult>();
+            var originalDirectory = Directory.GetCurrentDirectory();
+
+            try
+            {
+                foreach (var repo in repositories)
+                {
+                    _logger.Info($"Processing repository: {repo}");
+                    if (IsRepositoryUrl(repo))
+                    {
+                        var tempDir = CloneRepository(repo);
+                        if (string.IsNullOrEmpty(tempDir))
+                        {
+                            _logger.Warning($"Failed to clone repository: {repo}");
+                            continue;
+                        }
+                        Directory.SetCurrentDirectory(tempDir);
+                    }
+                    else if (Directory.Exists(repo))
+                    {
+                        Directory.SetCurrentDirectory(repo);
+                    }
+                    else
+                    {
+                        _logger.Warning($"Repository not found: {repo}");
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(requirementId))
+                    {
+                        var analysis = PerformCompleteAnalysis();
+                        allAnalysisResults.Add(analysis);
+                    }
+                    else
+                    {
+                        var analysis = AnalyzeRequirementInRepository(requirementId);
+                        if (analysis != null) allAnalysisResults.Add(analysis);
+                    }
+                }
+
+                if (allAnalysisResults.Count > 0)
+                {
+                    return MergeAnalysisResults(allAnalysisResults);
+                }
+
+                return new AnalysisResult
+                {
+                    CommitToRequirements = new Dictionary<string, List<string>>(),
+                    FileToRequirements = new Dictionary<string, HashSet<string>>(),
+                    MethodToRequirements = new Dictionary<string, MethodInfo>(),
+                    AnalysisDate = DateTime.Now,
+                    RepositoryPath = Directory.GetCurrentDirectory(),
+                    RepositoryPaths = repositories
+                };
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(originalDirectory);
+            }
+        }
+
+        // Minimal web host + API for UI
+        public void StartWebHost()
+        {
+            var builder = WebApplication.CreateBuilder();
+            var app = builder.Build();
+
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+
+            app.MapPost("/api/generate-report", async (HttpContext ctx) =>
+            {
+                try
+                {
+                    var request = await JsonSerializer.DeserializeAsync<GenerateRequest>(ctx.Request.Body);
+                    request ??= new GenerateRequest();
+
+                    var repos = request.Repositories ?? new List<string>();
+                    var reqId = request.RequirementIds?.FirstOrDefault();
+
+                    var analysis = AnalyzeRepositoriesForApi(repos, reqId);
+                    var format = (request.Format ?? "json").ToLower();
+
+                    if (format == "json")
+                    {
+                        var json = SerializeAnalysisToJsonString(analysis);
+                        ctx.Response.ContentType = "application/json";
+                        await ctx.Response.WriteAsync(json);
+                        return;
+                    }
+                    else if (format == "html")
+                    {
+                        var html = GenerateHtmlReport(analysis);
+                        ctx.Response.ContentType = "text/html";
+                        await ctx.Response.WriteAsync(html);
+                        return;
+                    }
+                    else if (format == "csv")
+                    {
+                        var csv = GenerateCsvFromAnalysis(analysis);
+                        ctx.Response.ContentType = "text/csv";
+                        ctx.Response.Headers.Add("Content-Disposition", "attachment; filename=traceability-report.csv");
+                        await ctx.Response.WriteAsync(csv);
+                        return;
+                    }
+
+                    ctx.Response.StatusCode = 400;
+                    await ctx.Response.WriteAsync("Unknown format");
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"API error: {ex.Message}");
+                    ctx.Response.StatusCode = 500;
+                    await ctx.Response.WriteAsync("Server error");
+                }
+            });
+
+            app.MapGet("/api/health", () => Results.Json(new { status = "ok" }));
+
+            var port = 5000;
+            _logger.Info($"Starting web server on http://localhost:{port}");
+            app.Run($"http://0.0.0.0:{port}");
+        }
+
+        private string SerializeAnalysisToJsonString(AnalysisResult analysis)
+        {
+            return JsonSerializer.Serialize(analysis, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        private string GenerateCsvFromAnalysis(AnalysisResult analysis)
+        {
+            var csv = new System.Text.StringBuilder();
+            csv.AppendLine("File,Requirements,Risk Level,Change Count");
+
+            foreach (var entry in analysis.FileToRequirements.OrderByDescending(f => f.Value.Count))
+            {
+                var reqs = string.Join(";", entry.Value);
+                var riskLevel = GetRiskLevel(entry.Value.Count);
+                csv.AppendLine($"\"{entry.Key}\",\"{reqs}\",\"{riskLevel}\",{entry.Value.Count}");
+            }
+
+            return csv.ToString();
         }
 
         private AnalysisResult MergeAnalysisResults(List<AnalysisResult> results)
@@ -1134,6 +1299,13 @@ CONFIG:
     }
 
     #region Models
+
+    public class GenerateRequest
+    {
+        public List<string> Repositories { get; set; }
+        public List<string> RequirementIds { get; set; }
+        public string Format { get; set; }
+    }
 
     public class Configuration
     {

@@ -1,0 +1,11 @@
+body { font-family: Inter, Arial, sans-serif; background: #f3f6fb; margin:0; padding:40px; }
+.container { max-width:800px; margin:0 auto; background:white; padding:28px; border-radius:8px; box-shadow:0 6px 18px rgba(20,30,50,0.08);} 
+h1 { margin-top:0; color:#223; }
+label { display:block; margin-top:16px; font-weight:600; color:#334; }
+textarea { width:100%; min-height:60px; padding:10px; border:1px solid #ddd; border-radius:6px; resize:vertical; }
+select { padding:8px 10px; border-radius:6px; }
+.actions{ margin-top:18px; display:flex; gap:12px; align-items:center }
+button { background:#2563eb; color:white; padding:10px 16px; border-radius:8px; border:none; cursor:pointer }
+button:disabled { opacity:0.6 }
+.status{ color:#666 }
+.note{ margin-top:14px; color:#666 }
