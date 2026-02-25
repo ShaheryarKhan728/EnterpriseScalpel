@@ -33,8 +33,25 @@ document.getElementById('generate').addEventListener('click', async () => {
       const text = await res.text();
       const blob = new Blob([text], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      status.textContent = 'Opened report in new tab';
+      
+      // Create a hidden link and trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'traceability-report.html'; // Forces download instead of opening
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      status.textContent = 'Downloaded HTML report';
+
+      // const text = await res.text();
+      // const blob = new Blob([text], { type: 'text/html' });
+      // const url = URL.createObjectURL(blob);
+      // window.open(url, '_blank');
+      // status.textContent = 'Opened report in new tab';
     } else if (format === 'json' || format === 'csv') {
       const blob = await res.blob();
       const ok = res.headers.get('content-disposition');

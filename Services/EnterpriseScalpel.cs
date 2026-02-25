@@ -139,7 +139,8 @@ namespace Scalpel.Enterprise
 
                     if (IsRepositoryUrl(repo))
                     {
-                        var tempDir = CloneRepository(repo);
+                        var (repoUrl, branchName) = ParseRepositoryUrl(repo);
+                        var tempDir = CloneRepository(repoUrl, branchName);
                         if (string.IsNullOrEmpty(tempDir))
                         {
                             _logger.Warning($"Failed to clone repository: {repo}");
@@ -198,7 +199,60 @@ namespace Scalpel.Enterprise
                    repository.EndsWith(".git");
         }
 
-        private string CloneRepository(string repositoryUrl)
+        /// <summary>
+        /// Extracts repository URL and branch name from repository input.
+        /// Supports formats like:
+        /// - https://github.com/user/repo/tree/develop
+        /// - https://gitlab.com/group/project/-/tree/develop
+        /// - https://gitlab.com/group/project/-/tree/develop?ref_type=heads
+        /// - https://github.com/user/repo.git
+        /// - git@github.com:user/repo.git
+        /// </summary>
+        private (string repositoryUrl, string branchName) ParseRepositoryUrl(string repositoryInput)
+        {
+            string repositoryUrl = repositoryInput;
+            string branchName = null;
+
+            // Handle GitHub tree URLs: https://github.com/user/repo/tree/branch-name
+            var githubTreeMatch = Regex.Match(repositoryInput, @"(https?://github\.com/[^/]+/[^/]+)/tree/(.+?)(?:\?|$)");
+            if (githubTreeMatch.Success)
+            {
+                repositoryUrl = githubTreeMatch.Groups[1].Value + ".git";
+                branchName = githubTreeMatch.Groups[2].Value;
+                return (repositoryUrl, branchName);
+            }
+
+            // Handle GitLab tree URLs: https://gitlab.com/group/project/-/tree/branch-name
+            var gitlabTreeMatch = Regex.Match(repositoryInput, @"(https?://[^/]+/[^/]+/[^/]+)/-/tree/(.+?)(?:\?|$)");
+            if (gitlabTreeMatch.Success)
+            {
+                repositoryUrl = gitlabTreeMatch.Groups[1].Value + ".git";
+                branchName = gitlabTreeMatch.Groups[2].Value;
+                return (repositoryUrl, branchName);
+            }
+
+            // Handle git SSH URLs with branch (if specified with #): git@github.com:user/repo.git#branch-name
+            var sshBranchMatch = Regex.Match(repositoryInput, @"(git@.+\.git)#(.+)");
+            if (sshBranchMatch.Success)
+            {
+                repositoryUrl = sshBranchMatch.Groups[1].Value;
+                branchName = sshBranchMatch.Groups[2].Value;
+                return (repositoryUrl, branchName);
+            }
+
+            // Handle https URLs with branch (if specified with #): https://github.com/user/repo.git#branch-name
+            var httpsBranchMatch = Regex.Match(repositoryInput, @"(https?://.+\.git)#(.+)");
+            if (httpsBranchMatch.Success)
+            {
+                repositoryUrl = httpsBranchMatch.Groups[1].Value;
+                branchName = httpsBranchMatch.Groups[2].Value;
+                return (repositoryUrl, branchName);
+            }
+
+            return (repositoryUrl, branchName);
+        }
+
+        private string CloneRepository(string repositoryUrl, string branchName = null)
         {
             try
             {
@@ -206,13 +260,22 @@ namespace Scalpel.Enterprise
                 Directory.CreateDirectory(tempDir);
 
                 _logger.Info($"Cloning repository to: {tempDir}");
+                if (!string.IsNullOrEmpty(branchName))
+                {
+                    _logger.Info($"Checking out branch: {branchName}");
+                }
+
+                // Build clone command with optional branch
+                var cloneArgs = branchName != null 
+                    ? $"clone --branch {branchName} {repositoryUrl} {tempDir}"
+                    : $"clone {repositoryUrl} {tempDir}";
 
                 var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = "git",
-                        Arguments = $"clone {repositoryUrl} {tempDir}",
+                        Arguments = cloneArgs,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                         UseShellExecute = false,
@@ -275,8 +338,13 @@ namespace Scalpel.Enterprise
             }
 
             var commitToReqs = BuildCommitToRequirementsMap();
-            var allCommitFiles = GetAllCommitFiles(commitToReqs.Keys);
-            var fileToReqs = BuildFileToRequirementsMap(commitToReqs, allCommitFiles);
+            
+            // Filter commits to only those containing the specific requirement ID
+            var filteredCommitToReqs = commitToReqs.Where(c => c.Value.Contains(requirementId))
+                .ToDictionary(x => x.Key, x => x.Value);
+            
+            var allCommitFiles = GetAllCommitFiles(filteredCommitToReqs.Keys);
+            var fileToReqs = BuildFileToRequirementsMap(filteredCommitToReqs, allCommitFiles);
 
             var filteredFileToReqs = new Dictionary<string, HashSet<string>>();
             foreach (var file in fileToReqs)
@@ -289,10 +357,9 @@ namespace Scalpel.Enterprise
 
             var analysis = new AnalysisResult
             {
-                CommitToRequirements = commitToReqs.Where(c => c.Value.Contains(requirementId))
-                    .ToDictionary(x => x.Key, x => x.Value),
+                CommitToRequirements = filteredCommitToReqs,
                 FileToRequirements = filteredFileToReqs,
-                MethodToRequirements = BuildMethodToRequirementsMap(commitToReqs, allCommitFiles),
+                MethodToRequirements = BuildMethodToRequirementsMap(filteredCommitToReqs, allCommitFiles),
                 AnalysisDate = DateTime.Now,
                 RepositoryPath = Directory.GetCurrentDirectory(),
                 FilteredByRequirementId = requirementId
@@ -330,7 +397,8 @@ namespace Scalpel.Enterprise
                     _logger.Info($"Processing repository: {repo}");
                     if (IsRepositoryUrl(repo))
                     {
-                        var tempDir = CloneRepository(repo);
+                        var (repoUrl, branchName) = ParseRepositoryUrl(repo);
+                        var tempDir = CloneRepository(repoUrl, branchName);
                         if (string.IsNullOrEmpty(tempDir))
                         {
                             _logger.Warning($"Failed to clone repository: {repo}");
@@ -418,6 +486,7 @@ namespace Scalpel.Enterprise
                     {
                         var html = _reportService.GenerateHtmlReport(analysis);
                         ctx.Response.ContentType = "text/html";
+                        ctx.Response.Headers["Content-Disposition"] = "attachment; filename=traceability-report.html";
                         await ctx.Response.WriteAsync(html);
                         return;
                     }
@@ -604,7 +673,7 @@ namespace Scalpel.Enterprise
 
         private Dictionary<string, List<string>> BuildCommitToRequirementsMap()
         {
-            var logLines = RunGitCommand("log --pretty=format:\"%H %s\" --all");
+            var logLines = RunGitCommand("log --pretty=format:\"%H %s\" --all --no-merges");
             if (string.IsNullOrWhiteSpace(logLines))
             {
                 return new Dictionary<string, List<string>>();
@@ -629,7 +698,7 @@ namespace Scalpel.Enterprise
 
         private List<string> GetCommitsForRequirement(string requirementId)
         {
-            var output = RunGitCommand($"log --grep={requirementId} --oneline");
+            var output = RunGitCommand($"log --grep={requirementId} --oneline --no-merges");
             return string.IsNullOrWhiteSpace(output)
                 ? new List<string>()
                 : output.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -885,30 +954,63 @@ namespace Scalpel.Enterprise
                               .ToArray();
         }
 
-        private List<(int start, int end)> GetChangedLineRanges(string commitHash)
+        private Dictionary<string, List<(int start, int end)>> GetChangedLineRangesByFile(string commitHash)
         {
             var diffOutput = RunGitCommand($"show {commitHash}");
-            var changedLineRanges = new List<(int start, int end)>();
+            var changedLineRangesByFile = new Dictionary<string, List<(int start, int end)>>();
+            string currentFile = null;
 
-            foreach (var line in diffOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            var lines = diffOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            for (int i = 0; i < lines.Length; i++)
             {
-                if (line.StartsWith("@@"))
+                var line = lines[i];
+                
+                // Reset on new file section
+                if (line.StartsWith("diff --git"))
                 {
-                    var parts = line.Split(' ');
-                    if (parts.Length < 3) continue;
-
-                    var rangePart = parts[2];
-                    var nums = rangePart.TrimStart('+').Split(',');
-
-                    if (int.TryParse(nums[0], out int start))
+                    currentFile = null;
+                }
+                
+                // Look for +++ line which shows the file path (more reliable than diff --git line)
+                // Only process changed files (with +++ line), skip deleted files (only have ---)
+                if (line.StartsWith("+++ b/"))
+                {
+                    // Format: "+++ b/path/to/file.cs"
+                    currentFile = line.Substring(6);  // Remove "+++ b/" prefix
+                    // Normalize path separators to forward slashes
+                    currentFile = currentFile.Replace("\\", "/");
+                    if (!changedLineRangesByFile.ContainsKey(currentFile))
                     {
-                        int length = nums.Length > 1 && int.TryParse(nums[1], out int len) ? len : 1;
-                        changedLineRanges.Add((start, start + length));
+                        changedLineRangesByFile[currentFile] = new List<(int start, int end)>();
+                    }
+                }
+                else if (line.StartsWith("@@") && currentFile != null)
+                {
+                    // Format: "@@ -10,5 +15,8 @@"
+                    // We want the +15,8 part (new file line numbers)
+                    var match = Regex.Match(line, @"\+(\d+)(?:,(\d+))?");
+                    if (match.Success)
+                    {
+                        int start = int.Parse(match.Groups[1].Value);
+                        int length = match.Groups[2].Success ? int.Parse(match.Groups[2].Value) : 1;
+                        changedLineRangesByFile[currentFile].Add((start, start + length));
                     }
                 }
             }
 
-            return changedLineRanges;
+            return changedLineRangesByFile;
+        }
+
+        private List<(int start, int end)> GetChangedLineRanges(string commitHash)
+        {
+            var rangesByFile = GetChangedLineRangesByFile(commitHash);
+            var allRanges = new List<(int start, int end)>();
+            foreach (var ranges in rangesByFile.Values)
+            {
+                allRanges.AddRange(ranges);
+            }
+            return allRanges;
         }
 
         private IEnumerable<MethodDeclarationSyntax> GetMethodsFromFile(string filePath)
@@ -1017,12 +1119,31 @@ namespace Scalpel.Enterprise
                 if (!allCommitFiles.ContainsKey(commitHash)) continue;
 
                 var filesChanged = allCommitFiles[commitHash];
-                var changedLineRanges = GetChangedLineRanges(commitHash);
+                var changedLineRangesByFile = GetChangedLineRangesByFile(commitHash);
 
                 foreach (var file in filesChanged.Where(f => f.EndsWith(".cs")))
                 {
+                    // Normalize the file path to match what's in changedLineRangesByFile
+                    var normalizedFile = file.Replace("\\", "/");
+                    
                     var absolutePath = Path.Combine(Directory.GetCurrentDirectory(), file);
                     if (!File.Exists(absolutePath)) continue;
+
+                    // Get line ranges for THIS specific file, not all files in the commit
+                    var fileLineRanges = new List<(int start, int end)>();
+                    
+                    // Try both the original and normalized path
+                    if (changedLineRangesByFile.ContainsKey(normalizedFile))
+                    {
+                        fileLineRanges = changedLineRangesByFile[normalizedFile];
+                    }
+                    else if (changedLineRangesByFile.ContainsKey(file))
+                    {
+                        fileLineRanges = changedLineRangesByFile[file];
+                    }
+
+                    // If no ranges found for this file, skip it
+                    if (fileLineRanges.Count == 0) continue;
 
                     var methods = GetMethodsFromFile(absolutePath);
 
@@ -1030,7 +1151,7 @@ namespace Scalpel.Enterprise
                     {
                         var (methodStart, methodEnd) = GetMethodLineRange(method);
 
-                        foreach (var change in changedLineRanges)
+                        foreach (var change in fileLineRanges)
                         {
                             if (Overlaps((methodStart, methodEnd), change))
                             {
@@ -1140,15 +1261,33 @@ EXAMPLES:
   scalpel analyze --repos /path/to/repo1,/path/to/repo2 Req123
                                                (Requirement across multiple repos)
   scalpel analyze --repos https://github.com/org/repo.git,https://github.com/org/repo2.git Req456
-                                               (Requirement across remote repos)
-  scalpel impact Services/PaymentService.cs
-  scalpel report html
-  scalpel hotspots
+                                               (Requirement across remote repos with default branches)
 
 REPOSITORY FORMATS:
-  Local paths:     /absolute/path  or  C:\\Windows\\path
-  Remote URLs:     https://github.com/org/repo.git
-  Git SSH:         git@github.com:org/repo.git
+  Local paths:              /absolute/path  or  C:\\Windows\\path
+  
+  Git URLs:                 https://github.com/org/repo.git
+                           git@github.com:org/repo.git
+  
+  GitHub with branch:       https://github.com/org/repo/tree/branch-name
+  GitLab with branch:       https://gitlab.com/group/project/-/tree/branch-name
+                           https://gitlab.com/group/project/-/tree/branch-name?ref_type=heads
+  
+  Git URLs with branch:     https://github.com/org/repo.git#branch-name
+                           git@github.com:org/repo.git#branch-name
+
+BRANCH SPECIFICATION:
+  When you specify a repository URL with branch information, the analysis
+  will be performed only on that specific branch. Supported formats:
+  
+  - GitHub tree URLs:       https://github.com/org/repo/tree/develop
+  - GitLab tree URLs:       https://gitlab.com/group/project/-/tree/develop
+  - Hash-based notation:    https://url/repo.git#branch-name
+  
+  Examples:
+  scalpel analyze --repos 'https://github.com/org/repo/tree/develop' PSW-123
+  scalpel analyze --repos 'https://gitlab.com/group/proj/-/tree/staging' 
+  scalpel analyze --repos 'https://github.com/org/repo.git#feature-branch' Req456
 
 CONFIG:
   Edit scalpel.config.json to customize:
