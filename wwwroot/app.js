@@ -15,12 +15,13 @@ document.getElementById('generate').addEventListener('click', async () => {
   const reqsRaw = document.getElementById('reqs').value.trim();
   const reposRaw = document.getElementById('repos').value.trim();
   const format = document.getElementById('format').value;
+  const requirementPattern = document.getElementById('pattern')?.value?.trim();
 
   const requirementIds = reqsRaw ? reqsRaw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [];
   const repositories = reposRaw ? reposRaw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [];
 
   try {
-    const res = await postGenerate({ requirementIds, repositories, format });
+    const res = await postGenerate({ requirementIds, repositories, format, requirementPattern });
 
     if (!res.ok) {
       const text = await res.text();

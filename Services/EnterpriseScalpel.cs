@@ -301,7 +301,7 @@ namespace Scalpel.Enterprise
             return analysis;
         }
 
-        public AnalysisResult AnalyzeRepositoriesForApi(List<string> repositories, string requirementId)
+        public AnalysisResult AnalyzeRepositoriesForApi(List<string> repositories, string requirementId, string requirementPattern = null)
         {
             _logger.Info($"API: Analyzing {(repositories?.Count > 0 ? repositories.Count + " repositories" : "current repository")}...");
 
@@ -312,6 +312,16 @@ namespace Scalpel.Enterprise
 
             var allAnalysisResults = new List<AnalysisResult>();
             var originalDirectory = Directory.GetCurrentDirectory();
+            var originalPattern = _config.RequirementPattern;
+
+            if (!string.IsNullOrWhiteSpace(requirementPattern))
+            {
+                _logger.Info($"Using override requirement pattern: {requirementPattern}");
+                Console.WriteLine($"⚙️  Using override requirement pattern: {requirementPattern}");
+                _config.RequirementPattern = requirementPattern;
+            }
+            Console.WriteLine($"🔍 Analyzing repositories: {string.Join(", ", repositories)} for requirement ID: {requirementId ?? "N/A"} with pattern: {_config.RequirementPattern}");
+            _logger.Info($"Request requirement pattern: {requirementPattern}");
 
             try
             {
@@ -367,7 +377,12 @@ namespace Scalpel.Enterprise
             }
             finally
             {
+                // restore working directory and pattern
                 Directory.SetCurrentDirectory(originalDirectory);
+                if (!string.IsNullOrWhiteSpace(requirementPattern))
+                {
+                    _config.RequirementPattern = originalPattern;
+                }
             }
         }
 
@@ -389,8 +404,8 @@ namespace Scalpel.Enterprise
                     var repos = request.Repositories ?? new List<string>();
                     var reqId = request.RequirementIds?.FirstOrDefault();
 
-                    var analysis = AnalyzeRepositoriesForApi(repos, reqId);
-                    var format = (request.format ?? "json").ToLower();
+                    var analysis = AnalyzeRepositoriesForApi(repos, reqId, request.RequirementPattern);
+                    var format = (request.Format ?? "json").ToLower();
 
                     if (format == "json")
                     {

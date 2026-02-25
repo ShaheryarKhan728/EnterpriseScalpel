@@ -16,6 +16,9 @@
     <label>Repository Link(s) (comma or newline separated). Leave empty to analyze current repository.</label>
     <textarea id="repos" placeholder="https://github.com/org/repo.git\nC:\\path\\to\\local\\repo"></textarea>
 
+    <label>Requirement Pattern (regex) — optional, e.g. (?i)Req-\d+ or REQ-</label>
+    <textarea id="pattern" placeholder="(?i)REQ-\\d+"></textarea>
+
     <label>Output format</label>
     <select id="format">
       <option value="html">HTML</option>
