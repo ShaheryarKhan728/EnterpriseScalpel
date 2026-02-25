@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Enterprise Scalpel - Report Generator</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Enterprise Scalpel — Generate Traceability Report</h1>
+
+    <label>Requirement Id(s) (comma-separated)</label>
+    <textarea id="reqs" placeholder="REQ-123,REQ-456"></textarea>
+
+    <label>Repository Link(s) (comma or newline separated). Leave empty to analyze current repository.</label>
+    <textarea id="repos" required placeholder="https://github.com/org/repo.git\nC:\\path\\to\\local\\repo"></textarea>
+
+    <label>Requirement Pattern (regex) — optional, e.g. (?i)Req-\d+ or REQ-</label>
+    <textarea id="pattern" required placeholder="(?i)REQ-\\d+"></textarea>
+
+    <label>Output format</label>
+    <select id="format">
+      <option value="html">HTML</option>
+      <option value="json">JSON</option>
+      <option value="csv">CSV</option>
+    </select>
+
+    <div class="actions">
+      <button id="generate">Generate report</button>
+      <span id="status" class="status"></span>
+    </div>
+
+    <p class="note">When HTML is selected the result will open in a new tab. JSON/CSV will be downloaded.</p>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
