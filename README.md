@@ -394,13 +394,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 For issues, questions, or suggestions, please open an issue on GitHub or contact the maintainers.
 
-## 🎓 Learning Resources
-
-- [Requirement Traceability](https://en.wikipedia.org/wiki/Traceability_matrix)
-- [Git Commit Analysis](https://git-scm.com/book/en/v2/Git-Basics-Viewing-the-Commit-History)
-- [Code Complexity Metrics](https://docs.microsoft.com/en-us/visualstudio/code-quality/code-metrics-values)
-- [Roslyn: The .NET Compiler Platform](https://github.com/dotnet/roslyn)
-
 ## 🔖 Changelog
 
 ### v1.0.0 (2026-02-26)
