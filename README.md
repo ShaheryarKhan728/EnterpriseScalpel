@@ -426,4 +426,6 @@ For issues, questions, or suggestions, please open an issue on GitHub or contact
 
 ---
 
-**Made with ❤️ for enterprise quality assurance**
+**Developed by Shaheryar Khan**
+https://www.linkedin.com/in/shaheryarkhan28/
+Emailshaheryar@gmail.com
