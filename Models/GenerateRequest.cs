@@ -16,5 +16,8 @@ namespace Scalpel.Enterprise
 
         [JsonPropertyName("requirementPattern")]
         public string RequirementPattern { get; set; }
+
+        [JsonPropertyName("pmPlatform")]
+        public string? PmPlatform { get; set; }
     }
 }

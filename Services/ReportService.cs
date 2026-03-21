@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 
 namespace Scalpel.Enterprise
@@ -36,8 +39,10 @@ namespace Scalpel.Enterprise
             };
         }
 
-        public string GenerateHtmlReport(AnalysisResult analysis)
+        public string GenerateHtmlReport(AnalysisResult analysis, Dictionary<string, PMTicket> ticketData = null)
         {
+            ticketData ??= new Dictionary<string, PMTicket>();
+            
             // Count total requirements
             var uniqueRequirements = new HashSet<string>();
             foreach (var reqs in analysis.CommitToRequirements.Values)
@@ -334,6 +339,71 @@ namespace Scalpel.Enterprise
             box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
         }}
 
+        /* ====== TICKET LINKS (PM INTEGRATION) ====== */
+        .ticket-link {{
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 6px 10px;
+            border-radius: 6px;
+            display: inline-block;
+            transition: all 0.2s ease;
+            margin-right: 8px;
+            border: 1px solid #e0e7ff;
+        }}
+
+        .ticket-link:hover {{
+            background: #e3f2fd;
+            text-decoration: none;
+            transform: translateX(2px);
+            border-color: #0066cc;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.15);
+        }}
+
+        .ticket-link::before {{
+            content: '🔗 ';
+            opacity: 0.7;
+            margin-right: 4px;
+        }}
+
+        /* Platform badges */
+        .platform-badge {{
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: white;
+            vertical-align: middle;
+        }}
+
+        .badge-jira {{
+            background: #0052cc;
+        }}
+
+        .badge-clickup {{
+            background: #7b68ee;
+        }}
+
+        .badge-ado {{
+            background: #0078d4;
+        }}
+
+        .ticket-data {{
+            font-size: 0.9rem;
+            color: var(--neutral-600);
+            margin: 4px 0;
+        }}
+
+        .no-ticket-data {{
+            color: #999;
+            font-style: italic;
+            font-size: 0.9rem;
+        }}
+
         .expand-btn {{
             display: inline-block;
             background: var(--danger);
@@ -572,6 +642,32 @@ namespace Scalpel.Enterprise
             </table>
         </div>
 
+        <!-- PM Integration Section (if tickets available) -->
+        {(ticketData.Count > 0 ? $@"
+        <div class='card'>
+            <h2>✨ Requirements with PM Integration</h2>
+            <p style='color: var(--neutral-600); margin-bottom: 1rem; font-size: 0.9rem;'>Requirements enriched with ticket data from your PM platform</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Requirement ID</th>
+                        <th>Ticket</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Assignee</th>
+                        <th>Risk Score</th>
+                        <th>Files Affected</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {string.Join("", uniqueRequirements
+                        .OrderBy(r => r)
+                        .Select(req => GenerateEnrichedRequirementRow(req, ticketData, analysis.FileToRequirements)))}
+                </tbody>
+            </table>
+        </div>
+        " : "")}
+
         <!-- Method Traceability -->
         <div class='card'>
             <h2>⚙️ Method Traceability</h2>
@@ -610,25 +706,7 @@ namespace Scalpel.Enterprise
                 </div>
                 <div class='metadata-item'>
                     <strong>Report Type</strong>
-                    <span>Complete Traceability Analysis</span>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <script>
-        function expandBadges(btn) {{
-            const expanded = btn.nextElementSibling;
-            if (expanded && expanded.classList.contains('expanded-badges')) {{
-                const isVisible = expanded.style.display !== 'none';
-                expanded.style.display = isVisible ? 'none' : 'inline-block';
-                const count = parseInt(btn.textContent.match(/\d+/)[0]);
-                btn.textContent = isVisible ? '+' + count : '−' + count + ' less';
-            }}
-        }}
-
-        // Add interactivity: highlight rows on hover
+                    <span>{(ticketData.Count > 0 ? "✨ Enriched with PM Data" : "Complete Traceability Analysis")}</span>
         document.querySelectorAll('table tbody tr').forEach(row => {{
             row.addEventListener('mouseenter', function() {{
                 this.style.boxShadow = 'inset 0 0 10px rgba(59, 130, 246, 0.1)';
@@ -667,6 +745,69 @@ namespace Scalpel.Enterprise
                 4 or 5 => 4,
                 _ => 6
             };
+        }
+
+        private string GenerateEnrichedRequirementRow(string requirement, 
+            Dictionary<string, PMTicket> ticketData,
+            Dictionary<string, HashSet<string>> fileToRequirements)
+        {
+            var hasTicketData = ticketData.TryGetValue(requirement, out var ticket);
+            var filesAffected = fileToRequirements
+                .Count(f => f.Value.Contains(requirement));
+            var sharedFiles = fileToRequirements
+                .Count(f => f.Value.Contains(requirement) && f.Value.Count > 1);
+
+            // Calculate risk
+            var riskScore = Math.Min(filesAffected * 10 + sharedFiles * 20, 100);
+            var riskClass = riskScore >= 80 ? "risk-critical" :
+                           riskScore >= 60 ? "risk-high" :
+                           riskScore >= 30 ? "risk-medium" : "risk-low";
+
+            var html = "<tr>";
+            html += $"<td><strong>{requirement}</strong></td>";
+
+            // Ticket cell with clickable link
+            if (hasTicketData && !string.IsNullOrEmpty(ticket.Url))
+            {
+                var platformBadgeClass = ticket.Url.Contains("atlassian") ? "badge-jira" :
+                                        ticket.Url.Contains("clickup") ? "badge-clickup" : "badge-ado";
+
+                html += "<td>";
+                html += $"<a href='{EscapeHtml(ticket.Url)}' target='_blank' class='ticket-link' title='Open {ticket.Platform} ticket'>";
+                html += $"{EscapeHtml(ticket.Key)}: {EscapeHtml(ticket.Title)}";
+                html += "</a>";
+                html += $"<span class='platform-badge {platformBadgeClass}'>{ticket.Platform}</span>";
+                html += "</td>";
+                html += $"<td class='ticket-data'>{EscapeHtml(ticket.Status ?? "-")}</td>";
+                html += $"<td class='ticket-data'>{EscapeHtml(ticket.Priority ?? "-")}</td>";
+                html += $"<td class='ticket-data'>{EscapeHtml(ticket.Assignee ?? "Unassigned")}</td>";
+            }
+            else
+            {
+                html += "<td class='no-ticket-data'>No ticket data</td>";
+                html += "<td class='no-ticket-data'>-</td>";
+                html += "<td class='no-ticket-data'>-</td>";
+                html += "<td class='no-ticket-data'>-</td>";
+            }
+
+            html += $"<td class='{riskClass}'>{riskScore}/100</td>";
+            html += $"<td>{filesAffected} files ({sharedFiles} shared)</td>";
+            html += "</tr>";
+
+            return html;
+        }
+
+        private string EscapeHtml(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return text;
+
+            return text
+                .Replace("&", "&amp;")
+                .Replace("<", "&lt;")
+                .Replace(">", "&gt;")
+                .Replace("\"", "&quot;")
+                .Replace("'", "&#39;");
         }
     }
 }

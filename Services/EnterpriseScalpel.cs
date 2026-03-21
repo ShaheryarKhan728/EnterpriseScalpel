@@ -1,6 +1,11 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -30,6 +35,7 @@ namespace Scalpel.Enterprise
                 case "analyze":
                     var repositories = new List<string>();
                     string requirementId = null;
+                    bool usePM = false;
 
                     for (int i = 1; i < args.Length; i++)
                     {
@@ -38,13 +44,24 @@ namespace Scalpel.Enterprise
                             repositories.AddRange(args[i + 1].Split(',').Select(r => r.Trim()));
                             i++;
                         }
+                        else if (args[i] == "--pm")
+                        {
+                            usePM = true;
+                        }
                         else if (!args[i].StartsWith("--"))
                         {
                             requirementId = args[i];
                         }
                     }
 
-                    AnalyzeWithRepositories(repositories, requirementId);
+                    if (usePM)
+                    {
+                        AnalyzeWithRepositoriesAndPM(repositories, requirementId);
+                    }
+                    else
+                    {
+                        AnalyzeWithRepositories(repositories, requirementId);
+                    }
                     break;
                 case "impact":
                     if (args.Length < 2)
@@ -368,6 +385,254 @@ namespace Scalpel.Enterprise
             return analysis;
         }
 
+        private void AnalyzeWithRepositoriesAndPM(List<string> repositories, string requirementId)
+        {
+            try
+            {
+                Task.Run(async () => await AnalyzeWithRepositoriesAndPMAsync(repositories, requirementId)).Wait();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error during PM-enriched analysis: {ex.Message}");
+            }
+        }
+
+        private async Task AnalyzeWithRepositoriesAndPMAsync(List<string> repositories, string requirementId)
+        {
+            _logger.Info($"Analyzing {(repositories.Count > 0 ? repositories.Count + " repositories" : "current repository")} with PM integration...");
+
+            if (repositories.Count == 0)
+            {
+                repositories.Add(Directory.GetCurrentDirectory());
+            }
+
+            var allAnalysisResults = new List<AnalysisResult>();
+            var originalDirectory = Directory.GetCurrentDirectory();
+
+            try
+            {
+                foreach (var repo in repositories)
+                {
+                    _logger.Info($"Processing repository: {repo}");
+
+                    if (IsRepositoryUrl(repo))
+                    {
+                        var (repoUrl, branchName) = ParseRepositoryUrl(repo);
+                        var tempDir = CloneRepository(repoUrl, branchName);
+                        if (string.IsNullOrEmpty(tempDir))
+                        {
+                            _logger.Warning($"Failed to clone repository: {repo}");
+                            continue;
+                        }
+                        Directory.SetCurrentDirectory(tempDir);
+                    }
+                    else if (Directory.Exists(repo))
+                    {
+                        Directory.SetCurrentDirectory(repo);
+                    }
+                    else
+                    {
+                        _logger.Warning($"Repository not found: {repo}");
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(requirementId))
+                    {
+                        _logger.Info("Performing complete analysis with PM enrichment...");
+                        var analysis = PerformCompleteAnalysis();
+                        allAnalysisResults.Add(analysis);
+                    }
+                    else
+                    {
+                        var analysis = AnalyzeRequirementInRepository(requirementId);
+                        if (analysis != null)
+                        {
+                            allAnalysisResults.Add(analysis);
+                        }
+                    }
+                }
+
+                if (allAnalysisResults.Count > 0)
+                {
+                    var mergedAnalysis = MergeAnalysisResults(allAnalysisResults);
+                    DisplayAnalysis(mergedAnalysis);
+                    await ExportResultsWithPMAsync(mergedAnalysis);
+                }
+                else
+                {
+                    _logger.Warning("No analysis results to display");
+                }
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(originalDirectory);
+            }
+        }
+
+        private async Task ExportResultsWithPMAsync(AnalysisResult analysis)
+        {
+            var outputDir = Path.GetFullPath(_config.OutputDirectory);
+            Directory.CreateDirectory(outputDir);
+
+            // Load PM configuration
+            PMPlatformManager pmManager = null;
+            Dictionary<string, PMTicket> ticketData = new Dictionary<string, PMTicket>();
+
+            try
+            {
+                var pmConfigPath = "pm-integration.config.json";
+                if (File.Exists(pmConfigPath))
+                {
+                    _logger.Info("Loading PM configuration...");
+                    var pmConfigJson = File.ReadAllText(pmConfigPath);
+                    var pmConfig = JsonSerializer.Deserialize<PMConfig>(pmConfigJson);
+
+                    if (pmConfig?.Enabled == true)
+                    {
+                        // Load API tokens from environment variables if not in config
+                        if (string.IsNullOrWhiteSpace(pmConfig.ApiToken))
+                        {
+                            pmConfig.ApiToken = pmConfig.Platform?.ToLower() switch
+                            {
+                                "jira" => Environment.GetEnvironmentVariable("JIRA_API_TOKEN"),
+                                "clickup" => Environment.GetEnvironmentVariable("CLICKUP_API_TOKEN"),
+                                "azuredevops" or "ado" => Environment.GetEnvironmentVariable("ADO_PAT"),
+                                _ => null
+                            };
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(pmConfig.ApiToken))
+                        {
+                            pmManager = new PMPlatformManager(pmConfig, _logger, _config.OutputDirectory);
+
+                            // Extract all unique requirements from analysis
+                            var requirements = new HashSet<string>();
+                            foreach (var reqs in analysis.CommitToRequirements.Values)
+                            {
+                                foreach (var req in reqs)
+                                {
+                                    requirements.Add(req);
+                                }
+                            }
+
+                            if (requirements.Count > 0)
+                            {
+                                _logger.Info($"Fetching PM data for {requirements.Count} requirement(s)...");
+                                ticketData = await pmManager.GetTicketsForRequirementsAsync(requirements);
+                                _logger.Success($"Retrieved PM data for {ticketData.Count} ticket(s)");
+                            }
+                        }
+                        else
+                        {
+                            _logger.Warning("PM integration enabled but no API token found");
+                        }
+                    }
+                    else
+                    {
+                        _logger.Info("PM integration is disabled in configuration");
+                    }
+                }
+                else
+                {
+                    _logger.Info("No PM configuration file found (pm-integration.config.json)");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning($"Failed to initialize PM integration: {ex.Message}");
+            }
+
+            // Export reports with PM data
+            ExportToJson(analysis, outputDir);
+            ExportToHtmlWithPM(analysis, outputDir, ticketData);
+            ExportToMarkdown(analysis, outputDir);
+
+            _logger.Success($"Reports exported to: {outputDir}");
+        }
+
+        private async Task<Dictionary<string, PMTicket>> FetchPMDataForPlatformAsync(AnalysisResult analysis, string pmPlatform)
+        {
+            var ticketData = new Dictionary<string, PMTicket>();
+
+            try
+            {
+                var pmConfigPath = "pm-integration.config.json";
+                if (!File.Exists(pmConfigPath))
+                {
+                    _logger.Warning($"PM configuration file not found: {pmConfigPath}");
+                    return ticketData;
+                }
+
+                var pmConfigJson = File.ReadAllText(pmConfigPath);
+                var pmConfig = JsonSerializer.Deserialize<PMConfig>(pmConfigJson);
+
+                if (pmConfig == null)
+                {
+                    _logger.Warning("Failed to deserialize PM configuration");
+                    return ticketData;
+                }
+
+                // Only use config if platform matches
+                if (pmConfig.Platform?.ToLower() != pmPlatform?.ToLower())
+                {
+                    _logger.Warning($"PM platform mismatch. Config has '{pmConfig.Platform}' but requested '{pmPlatform}'");
+                    return ticketData;
+                }
+
+                // Load API token from environment variable if not in config
+                if (string.IsNullOrWhiteSpace(pmConfig.ApiToken))
+                {
+                    pmConfig.ApiToken = pmPlatform?.ToLower() switch
+                    {
+                        "jira" => Environment.GetEnvironmentVariable("JIRA_API_TOKEN"),
+                        "clickup" => Environment.GetEnvironmentVariable("CLICKUP_API_TOKEN"),
+                        "azuredevops" or "ado" => Environment.GetEnvironmentVariable("ADO_PAT"),
+                        _ => null
+                    };
+                }
+
+                if (string.IsNullOrWhiteSpace(pmConfig.ApiToken))
+                {
+                    _logger.Warning($"No API token found for platform: {pmPlatform}");
+                    return ticketData;
+                }
+
+                var outputDir = Path.GetFullPath(_config.OutputDirectory);
+                var pmManager = new PMPlatformManager(pmConfig, _logger, outputDir);
+
+                // Extract all unique requirements from analysis
+                var requirements = new HashSet<string>();
+                foreach (var reqs in analysis.CommitToRequirements.Values)
+                {
+                    foreach (var req in reqs)
+                    {
+                        requirements.Add(req);
+                    }
+                }
+
+                if (requirements.Count > 0)
+                {
+                    _logger.Info($"Fetching PM data from {pmPlatform} for {requirements.Count} requirement(s)...");
+                    ticketData = await pmManager.GetTicketsForRequirementsAsync(requirements);
+                    _logger.Success($"Retrieved PM data for {ticketData.Count} ticket(s) from {pmPlatform}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning($"Failed to fetch PM data for platform {pmPlatform}: {ex.Message}");
+            }
+
+            return ticketData;
+        }
+
+        private void ExportToHtmlWithPM(AnalysisResult analysis, string outputDir, Dictionary<string, PMTicket> ticketData)
+        {
+            var html = _reportService.GenerateHtmlReport(analysis, ticketData);
+            var path = Path.Combine(outputDir, "traceability-report.html");
+            File.WriteAllText(path, html);
+            _logger.Success($"HTML report: {path}");
+        }
+
         public AnalysisResult AnalyzeRepositoriesForApi(List<string> repositories, string requirementId, string requirementPattern = null)
         {
             _logger.Info($"API: Analyzing {(repositories?.Count > 0 ? repositories.Count + " repositories" : "current repository")}...");
@@ -475,6 +740,13 @@ namespace Scalpel.Enterprise
                     var analysis = AnalyzeRepositoriesForApi(repos, reqId, request.RequirementPattern);
                     var format = (request.Format ?? "json").ToLower();
 
+                    // Fetch PM data if platform specified
+                    Dictionary<string, PMTicket> ticketData = new Dictionary<string, PMTicket>();
+                    if (!string.IsNullOrWhiteSpace(request.PmPlatform))
+                    {
+                        ticketData = await FetchPMDataForPlatformAsync(analysis, request.PmPlatform);
+                    }
+
                     if (format == "json")
                     {
                         var json = SerializeAnalysisToJsonString(analysis);
@@ -484,7 +756,7 @@ namespace Scalpel.Enterprise
                     }
                     else if (format == "html")
                     {
-                        var html = _reportService.GenerateHtmlReport(analysis);
+                        var html = _reportService.GenerateHtmlReport(analysis, ticketData.Count > 0 ? ticketData : null);
                         ctx.Response.ContentType = "text/html";
                         ctx.Response.Headers["Content-Disposition"] = "attachment; filename=traceability-report.html";
                         await ctx.Response.WriteAsync(html);
@@ -1250,6 +1522,10 @@ ANALYSIS OPTIONS:
                              (comma-separated, no spaces after commas)
                              If omitted, uses current directory
   
+  --pm                       Enrich HTML report with PM platform data
+                             (JIRA, ClickUp, or Azure DevOps)
+                             Requires pm-integration.config.json configuration
+  
   reqId (optional)           Analyze specific requirement across repositories
                              If omitted, performs complete analysis
 
@@ -1260,8 +1536,22 @@ EXAMPLES:
   scalpel analyze Req123                        (Requirement in current repo)
   scalpel analyze --repos /path/to/repo1,/path/to/repo2 Req123
                                                (Requirement across multiple repos)
-  scalpel analyze --repos https://github.com/org/repo.git,https://github.com/org/repo2.git Req456
-                                               (Requirement across remote repos with default branches)
+  scalpel analyze --pm Req123                   (Requirement with PM enrichment)
+  scalpel analyze --repos /path/to/repo1 --pm  (Full analysis with PM data)
+
+PM INTEGRATION:
+  The --pm flag enriches HTML reports with ticket data from your PM platform:
+  - JIRA Cloud (Atlassian Cloud API v3)
+  - ClickUp (API v2)
+  - Azure DevOps (REST API 7.0)
+  
+  Setup:
+  1. Create pm-integration.config.json in current directory
+  2. Configure with platform, credentials, and project details
+  3. Support for environment variables: JIRA_API_TOKEN, CLICKUP_API_TOKEN, ADO_PAT
+  4. Run analysis with --pm flag
+  
+  Output: enriched-report.html with clickable ticket links and metadata
 
 REPOSITORY FORMATS:
   Local paths:              /absolute/path  or  C:\\Windows\\path
@@ -1295,6 +1585,10 @@ CONFIG:
   - Output directory
   - File filters
   - Risk thresholds
+  
+  PM Integration configurations:
+  - Create pm-integration.config.json for PM platform setup
+  - See examples in documentation for each platform
 ");
         }
     }

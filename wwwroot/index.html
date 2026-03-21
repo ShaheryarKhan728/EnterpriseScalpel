@@ -26,6 +26,14 @@
       <option value="csv">CSV</option>
     </select>
 
+    <label>PM Platform (optional) — Select to enrich report with ticket data</label>
+    <select id="pmPlatform">
+      <option value="">None - Skip PM Integration</option>
+      <option value="jira">JIRA</option>
+      <option value="clickup">ClickUp</option>
+      <option value="azuredevops">Azure DevOps</option>
+    </select>
+
     <div class="actions">
       <button id="generate">Generate report</button>
       <span id="status" class="status"></span>

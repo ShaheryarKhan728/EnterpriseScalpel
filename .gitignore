@@ -11,3 +11,14 @@ x86/
 *.nuget.targets
 project.assets.json
 project.nuget.cache
+pm-integration.config.json
+
+# PM Integration Documentation and Templates
+PM_INTEGRATION_GUIDE.md
+pm-integration.config.ado.example.json
+pm-integration.config.clickup.example.json
+pm-integration.config.jira.example.json
+pm-integration.config.template.json
+
+# AI/Prompt Instructions
+.github/prompts/plan-pmPlatformIntegration.prompt.md
