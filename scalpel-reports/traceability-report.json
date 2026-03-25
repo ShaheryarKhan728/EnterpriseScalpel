@@ -1,0 +1,1240 @@
+{
+  "CommitToRequirements": {
+    "EnterpriseScalpel:63d87ce967e0fa1b0350c2a28dc83baac32adac3": [
+      "REQ-122"
+    ],
+    "EnterpriseScalpel:ad4b7694a6523000b9c5e3ae47d2d9d922624db0": [
+      "REQ-121"
+    ],
+    "EnterpriseScalpel:e727dca2b4702018bff6d5341bc130689f617fd0": [
+      "REQ-120"
+    ],
+    "EnterpriseScalpel:00d73105eba411bbf565251201e7b425c13cdeaa": [
+      "REQ-119"
+    ],
+    "EnterpriseScalpel:d394f272294ca781439a2aeff499bcc4d441c670": [
+      "REQ-118"
+    ],
+    "EnterpriseScalpel:e2ec886c743419f55c30d9b9cf07c2e3ae50d5ef": [
+      "REQ-117"
+    ],
+    "EnterpriseScalpel:a4747c4ef6105fa113b2b108e8831a8c76429a2f": [
+      "REQ-116"
+    ],
+    "EnterpriseScalpel:94c67587c3ddf90ca50eec68fb8e268d7cc5b90a": [
+      "REQ-115"
+    ],
+    "EnterpriseScalpel:321a5aef702acd045e7c31116a53be5d8512a49c": [
+      "REQ-114"
+    ],
+    "EnterpriseScalpel:74020512ad59a074f29f932785e922084d621c5c": [
+      "PSW-113"
+    ],
+    "EnterpriseScalpel:5016f6cdd7c97a449214fb3c3e844341c3a9b785": [
+      "REQ-112"
+    ],
+    "EnterpriseScalpel:c4bca5ce3b3a2c694cd22e6d9ade4637b972d27a": [
+      "REQ-111"
+    ]
+  },
+  "FileToRequirements": {
+    "EnterpriseScalpel/.gitignore": [
+      "REQ-122",
+      "REQ-111"
+    ],
+    "EnterpriseScalpel/Models/GenerateRequest.cs": [
+      "REQ-122",
+      "REQ-118"
+    ],
+    "EnterpriseScalpel/Models/PMIntegration.Core.cs": [
+      "REQ-122"
+    ],
+    "EnterpriseScalpel/Models/PMIntegration.Factory.cs": [
+      "REQ-122"
+    ],
+    "EnterpriseScalpel/Models/PMIntegration.Manager.cs": [
+      "REQ-122"
+    ],
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs": [
+      "REQ-122",
+      "REQ-120",
+      "REQ-118"
+    ],
+    "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs": [
+      "REQ-122"
+    ],
+    "EnterpriseScalpel/Services/PMIntegration.ClickUp.cs": [
+      "REQ-122"
+    ],
+    "EnterpriseScalpel/Services/PMIntegration.Jira.cs": [
+      "REQ-122"
+    ],
+    "EnterpriseScalpel/Services/ReportService.cs": [
+      "REQ-122",
+      "REQ-118"
+    ],
+    "EnterpriseScalpel/wwwroot/app.js": [
+      "REQ-122",
+      "REQ-120",
+      "REQ-116"
+    ],
+    "EnterpriseScalpel/wwwroot/index.html": [
+      "REQ-122",
+      "REQ-119",
+      "REQ-116"
+    ],
+    "EnterpriseScalpel/README.md": [
+      "REQ-121"
+    ],
+    "EnterpriseScalpel/Logging/ConsoleLogger.cs": [
+      "REQ-118"
+    ],
+    "EnterpriseScalpel/Logging/ILogger.cs": [
+      "REQ-118"
+    ],
+    "EnterpriseScalpel/Models/AnalysisResult.cs": [
+      "REQ-118"
+    ],
+    "EnterpriseScalpel/Models/Configuration.cs": [
+      "REQ-118"
+    ],
+    "EnterpriseScalpel/Models/Hotspot.cs": [
+      "REQ-118"
+    ],
+    "EnterpriseScalpel/Models/MethodInfo.cs": [
+      "REQ-118"
+    ],
+    "EnterpriseScalpel/Models/RequirementImpact.cs": [
+      "REQ-118"
+    ],
+    "EnterpriseScalpel/Program.cs": [
+      "REQ-118",
+      "REQ-117",
+      "REQ-116",
+      "REQ-115",
+      "REQ-114",
+      "PSW-113",
+      "REQ-112",
+      "REQ-111"
+    ],
+    "EnterpriseScalpel/EnterpriseScalpel.csproj": [
+      "REQ-116",
+      "REQ-112",
+      "REQ-111"
+    ],
+    "EnterpriseScalpel/wwwroot/styles.css": [
+      "REQ-116"
+    ],
+    "EnterpriseScalpel/EnterpriseScalpel.sln": [
+      "REQ-112"
+    ]
+  },
+  "MethodToRequirements": {
+    "EnterpriseScalpel/Models/PMIntegration.Core.cs::GetTicketAsync": {
+      "FilePath": "EnterpriseScalpel/Models/PMIntegration.Core.cs",
+      "MethodName": "GetTicketAsync",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 111,
+      "LineEnd": 111,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Models/PMIntegration.Core.cs::SearchTicketsByRequirementAsync": {
+      "FilePath": "EnterpriseScalpel/Models/PMIntegration.Core.cs",
+      "MethodName": "SearchTicketsByRequirementAsync",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 122,
+      "LineEnd": 122,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Models/PMIntegration.Core.cs::ValidateConfig": {
+      "FilePath": "EnterpriseScalpel/Models/PMIntegration.Core.cs",
+      "MethodName": "ValidateConfig",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 128,
+      "LineEnd": 128,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Models/PMIntegration.Factory.cs::Create": {
+      "FilePath": "EnterpriseScalpel/Models/PMIntegration.Factory.cs",
+      "MethodName": "Create",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 16,
+      "LineEnd": 32,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Models/PMIntegration.Manager.cs::GetTicketsForRequirementsAsync": {
+      "FilePath": "EnterpriseScalpel/Models/PMIntegration.Manager.cs",
+      "MethodName": "GetTicketsForRequirementsAsync",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 46,
+      "LineEnd": 96,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Models/PMIntegration.Manager.cs::FetchTicketWithCacheAsync": {
+      "FilePath": "EnterpriseScalpel/Models/PMIntegration.Manager.cs",
+      "MethodName": "FetchTicketWithCacheAsync",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 101,
+      "LineEnd": 146,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Models/PMIntegration.Manager.cs::ClearCacheAsync": {
+      "FilePath": "EnterpriseScalpel/Models/PMIntegration.Manager.cs",
+      "MethodName": "ClearCacheAsync",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 151,
+      "LineEnd": 170,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Models/PMIntegration.Manager.cs::LoadCache": {
+      "FilePath": "EnterpriseScalpel/Models/PMIntegration.Manager.cs",
+      "MethodName": "LoadCache",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 175,
+      "LineEnd": 211,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Models/PMIntegration.Manager.cs::SaveCache": {
+      "FilePath": "EnterpriseScalpel/Models/PMIntegration.Manager.cs",
+      "MethodName": "SaveCache",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 216,
+      "LineEnd": 243,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::ExecuteCommand": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "ExecuteCommand",
+      "Requirements": [
+        "REQ-122",
+        "REQ-118"
+      ],
+      "ChangeCount": 3,
+      "LineStart": 30,
+      "LineEnd": 85,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::ParseGitUrl": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "ParseGitUrl",
+      "Requirements": [
+        "REQ-122",
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 5,
+      "LineStart": 346,
+      "LineEnd": 397,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::PerformCompleteAnalysis": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "PerformCompleteAnalysis",
+      "Requirements": [
+        "REQ-122",
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 3,
+      "LineStart": 399,
+      "LineEnd": 418,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::AnalyzeRequirementInRepository": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "AnalyzeRequirementInRepository",
+      "Requirements": [
+        "REQ-122",
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 3,
+      "LineStart": 420,
+      "LineEnd": 511,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::AnalyzeWithRepositoriesAndPM": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "AnalyzeWithRepositoriesAndPM",
+      "Requirements": [
+        "REQ-122",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 513,
+      "LineEnd": 523,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::AnalyzeWithRepositoriesAndPMAsync": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "AnalyzeWithRepositoriesAndPMAsync",
+      "Requirements": [
+        "REQ-122",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 525,
+      "LineEnd": 595,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::ExportResultsWithPMAsync": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "ExportResultsWithPMAsync",
+      "Requirements": [
+        "REQ-122",
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 3,
+      "LineStart": 597,
+      "LineEnd": 676,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::FetchPMDataForPlatformAsync": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "FetchPMDataForPlatformAsync",
+      "Requirements": [
+        "REQ-122",
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 4,
+      "LineStart": 678,
+      "LineEnd": 751,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::ExportToHtmlWithPM": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "ExportToHtmlWithPM",
+      "Requirements": [
+        "REQ-122",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 753,
+      "LineEnd": 759,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::AnalyzeRepositoriesForApi": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "AnalyzeRepositoriesForApi",
+      "Requirements": [
+        "REQ-122",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 761,
+      "LineEnd": 845,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::BuildFileToRequirementsMap": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "BuildFileToRequirementsMap",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 1518,
+      "LineEnd": 1560,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::BuildMethodToRequirementsMap": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "BuildMethodToRequirementsMap",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 1562,
+      "LineEnd": 1686,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs::ValidateConfig": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs",
+      "MethodName": "ValidateConfig",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 26,
+      "LineEnd": 31,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs::GetTicketAsync": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs",
+      "MethodName": "GetTicketAsync",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 33,
+      "LineEnd": 70,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs::SearchTicketsByRequirementAsync": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs",
+      "MethodName": "SearchTicketsByRequirementAsync",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 72,
+      "LineEnd": 128,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs::MapToTicket": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs",
+      "MethodName": "MapToTicket",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 130,
+      "LineEnd": 161,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs::GetFieldValue": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs",
+      "MethodName": "GetFieldValue",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 163,
+      "LineEnd": 170,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs::GetPriorityLabel": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs",
+      "MethodName": "GetPriorityLabel",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 172,
+      "LineEnd": 182,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs::EscapeWiql": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs",
+      "MethodName": "EscapeWiql",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 184,
+      "LineEnd": 188,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs::GetBasicAuthHeader": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.AzureDevOps.cs",
+      "MethodName": "GetBasicAuthHeader",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 190,
+      "LineEnd": 195,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.ClickUp.cs::ValidateConfig": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.ClickUp.cs",
+      "MethodName": "ValidateConfig",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 27,
+      "LineEnd": 32,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.ClickUp.cs::GetTicketAsync": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.ClickUp.cs",
+      "MethodName": "GetTicketAsync",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 34,
+      "LineEnd": 66,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.ClickUp.cs::SearchTicketsByRequirementAsync": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.ClickUp.cs",
+      "MethodName": "SearchTicketsByRequirementAsync",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 68,
+      "LineEnd": 103,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.ClickUp.cs::MapToTicket": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.ClickUp.cs",
+      "MethodName": "MapToTicket",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 105,
+      "LineEnd": 127,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.ClickUp.cs::UnixTimeStampToDateTime": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.ClickUp.cs",
+      "MethodName": "UnixTimeStampToDateTime",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 129,
+      "LineEnd": 134,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.Jira.cs::ValidateConfig": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.Jira.cs",
+      "MethodName": "ValidateConfig",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 26,
+      "LineEnd": 31,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.Jira.cs::GetTicketAsync": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.Jira.cs",
+      "MethodName": "GetTicketAsync",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 33,
+      "LineEnd": 69,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.Jira.cs::SearchTicketsByRequirementAsync": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.Jira.cs",
+      "MethodName": "SearchTicketsByRequirementAsync",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 71,
+      "LineEnd": 103,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.Jira.cs::MapToTicket": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.Jira.cs",
+      "MethodName": "MapToTicket",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 105,
+      "LineEnd": 122,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/PMIntegration.Jira.cs::GetBasicAuthHeader": {
+      "FilePath": "EnterpriseScalpel/Services/PMIntegration.Jira.cs",
+      "MethodName": "GetBasicAuthHeader",
+      "Requirements": [
+        "REQ-122"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 124,
+      "LineEnd": 129,
+      "RequirementDetails": {
+        "REQ-122": {}
+      }
+    },
+    "EnterpriseScalpel/Services/ReportService.cs::GetRiskLevel": {
+      "FilePath": "EnterpriseScalpel/Services/ReportService.cs",
+      "MethodName": "GetRiskLevel",
+      "Requirements": [
+        "REQ-122",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 30,
+      "LineEnd": 40,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/ReportService.cs::GenerateHtmlReport": {
+      "FilePath": "EnterpriseScalpel/Services/ReportService.cs",
+      "MethodName": "GenerateHtmlReport",
+      "Requirements": [
+        "REQ-122",
+        "REQ-118"
+      ],
+      "ChangeCount": 6,
+      "LineStart": 42,
+      "LineEnd": 820,
+      "RequirementDetails": {
+        "REQ-122": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::AnalyzeWithRepositories": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "AnalyzeWithRepositories",
+      "Requirements": [
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 3,
+      "LineStart": 139,
+      "LineEnd": 212,
+      "RequirementDetails": {
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::IsRepositoryUrl": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "IsRepositoryUrl",
+      "Requirements": [
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 214,
+      "LineEnd": 220,
+      "RequirementDetails": {
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::ParseRepositoryUrl": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "ParseRepositoryUrl",
+      "Requirements": [
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 3,
+      "LineStart": 231,
+      "LineEnd": 291,
+      "RequirementDetails": {
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::CloneRepository": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "CloneRepository",
+      "Requirements": [
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 293,
+      "LineEnd": 344,
+      "RequirementDetails": {
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::MergeAnalysisResults": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "MergeAnalysisResults",
+      "Requirements": [
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 937,
+      "LineEnd": 983,
+      "RequirementDetails": {
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::AnalyzeFileImpact": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "AnalyzeFileImpact",
+      "Requirements": [
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 985,
+      "LineEnd": 1006,
+      "RequirementDetails": {
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::FindHotspots": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "FindHotspots",
+      "Requirements": [
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 1008,
+      "LineEnd": 1037,
+      "RequirementDetails": {
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::GetAffectedFiles": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "GetAffectedFiles",
+      "Requirements": [
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 1117,
+      "LineEnd": 1130,
+      "RequirementDetails": {
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::GetAffectedMethods": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "GetAffectedMethods",
+      "Requirements": [
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 1132,
+      "LineEnd": 1136,
+      "RequirementDetails": {
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::AnalyzeDependencies": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "AnalyzeDependencies",
+      "Requirements": [
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 1138,
+      "LineEnd": 1142,
+      "RequirementDetails": {
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::CalculateRiskScore": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "CalculateRiskScore",
+      "Requirements": [
+        "REQ-120",
+        "REQ-118"
+      ],
+      "ChangeCount": 2,
+      "LineStart": 1144,
+      "LineEnd": 1151,
+      "RequirementDetails": {
+        "REQ-120": {},
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::GetRequirementsForFile": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "GetRequirementsForFile",
+      "Requirements": [
+        "REQ-120"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 1153,
+      "LineEnd": 1157,
+      "RequirementDetails": {
+        "REQ-120": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::ExportResults": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "ExportResults",
+      "Requirements": [
+        "REQ-120"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 1257,
+      "LineEnd": 1267,
+      "RequirementDetails": {
+        "REQ-120": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::ExportToJson": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "ExportToJson",
+      "Requirements": [
+        "REQ-120"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 1269,
+      "LineEnd": 1275,
+      "RequirementDetails": {
+        "REQ-120": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::ExportToHtml": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "ExportToHtml",
+      "Requirements": [
+        "REQ-120"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 1277,
+      "LineEnd": 1283,
+      "RequirementDetails": {
+        "REQ-120": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::ExportToCsv": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "ExportToCsv",
+      "Requirements": [
+        "REQ-120"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 1285,
+      "LineEnd": 1300,
+      "RequirementDetails": {
+        "REQ-120": {}
+      }
+    },
+    "EnterpriseScalpel/Logging/ConsoleLogger.cs::Info": {
+      "FilePath": "EnterpriseScalpel/Logging/ConsoleLogger.cs",
+      "MethodName": "Info",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 5,
+      "LineEnd": 5,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Logging/ConsoleLogger.cs::Warning": {
+      "FilePath": "EnterpriseScalpel/Logging/ConsoleLogger.cs",
+      "MethodName": "Warning",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 6,
+      "LineEnd": 6,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Logging/ConsoleLogger.cs::Error": {
+      "FilePath": "EnterpriseScalpel/Logging/ConsoleLogger.cs",
+      "MethodName": "Error",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 7,
+      "LineEnd": 7,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Logging/ConsoleLogger.cs::Success": {
+      "FilePath": "EnterpriseScalpel/Logging/ConsoleLogger.cs",
+      "MethodName": "Success",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 8,
+      "LineEnd": 8,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Logging/ConsoleLogger.cs::Debug": {
+      "FilePath": "EnterpriseScalpel/Logging/ConsoleLogger.cs",
+      "MethodName": "Debug",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 9,
+      "LineEnd": 16,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Logging/ILogger.cs::Info": {
+      "FilePath": "EnterpriseScalpel/Logging/ILogger.cs",
+      "MethodName": "Info",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 5,
+      "LineEnd": 5,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Logging/ILogger.cs::Warning": {
+      "FilePath": "EnterpriseScalpel/Logging/ILogger.cs",
+      "MethodName": "Warning",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 6,
+      "LineEnd": 6,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Logging/ILogger.cs::Error": {
+      "FilePath": "EnterpriseScalpel/Logging/ILogger.cs",
+      "MethodName": "Error",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 7,
+      "LineEnd": 7,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Logging/ILogger.cs::Success": {
+      "FilePath": "EnterpriseScalpel/Logging/ILogger.cs",
+      "MethodName": "Success",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 8,
+      "LineEnd": 8,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Logging/ILogger.cs::Debug": {
+      "FilePath": "EnterpriseScalpel/Logging/ILogger.cs",
+      "MethodName": "Debug",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 9,
+      "LineEnd": 9,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Models/Configuration.cs::LoadFromFile": {
+      "FilePath": "EnterpriseScalpel/Models/Configuration.cs",
+      "MethodName": "LoadFromFile",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 17,
+      "LineEnd": 25,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Models/MethodInfo.cs::Clone": {
+      "FilePath": "EnterpriseScalpel/Models/MethodInfo.cs",
+      "MethodName": "Clone",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 16,
+      "LineEnd": 30,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Program.cs::Main": {
+      "FilePath": "EnterpriseScalpel/Program.cs",
+      "MethodName": "Main",
+      "Requirements": [
+        "REQ-118",
+        "REQ-116",
+        "REQ-112"
+      ],
+      "ChangeCount": 3,
+      "LineStart": 5,
+      "LineEnd": 26,
+      "RequirementDetails": {
+        "REQ-118": {},
+        "REQ-116": {},
+        "REQ-112": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::RunFullAnalysis": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "RunFullAnalysis",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 87,
+      "LineEnd": 107,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::AnalyzeRequirement": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "AnalyzeRequirement",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 109,
+      "LineEnd": 137,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::StartWebHost": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "StartWebHost",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 847,
+      "LineEnd": 915,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::SerializeAnalysisToJsonString": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "SerializeAnalysisToJsonString",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 917,
+      "LineEnd": 920,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::GenerateCsvFromAnalysis": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "GenerateCsvFromAnalysis",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 922,
+      "LineEnd": 935,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::GenerateReport": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "GenerateReport",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 1039,
+      "LineEnd": 1069,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::BuildCommitToRequirementsMap": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "BuildCommitToRequirementsMap",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 1071,
+      "LineEnd": 1107,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/EnterpriseScalpel.cs::GetCommitsForRequirement": {
+      "FilePath": "EnterpriseScalpel/Services/EnterpriseScalpel.cs",
+      "MethodName": "GetCommitsForRequirement",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 1109,
+      "LineEnd": 1115,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/ReportService.cs::SerializeAnalysisToJsonString": {
+      "FilePath": "EnterpriseScalpel/Services/ReportService.cs",
+      "MethodName": "SerializeAnalysisToJsonString",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 10,
+      "LineEnd": 13,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    },
+    "EnterpriseScalpel/Services/ReportService.cs::GenerateCsvFromAnalysis": {
+      "FilePath": "EnterpriseScalpel/Services/ReportService.cs",
+      "MethodName": "GenerateCsvFromAnalysis",
+      "Requirements": [
+        "REQ-118"
+      ],
+      "ChangeCount": 1,
+      "LineStart": 15,
+      "LineEnd": 28,
+      "RequirementDetails": {
+        "REQ-118": {}
+      }
+    }
+  },
+  "AnalysisDate": "2026-03-23T23:19:21.9223049+05:00",
+  "RepositoryPath": null,
+  "RepositoryPaths": [
+    "/home/khan/OpenSource/EnterpriseScalpel"
+  ],
+  "FilteredByRequirementId": null
+}

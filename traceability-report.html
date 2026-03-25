@@ -1,0 +1,612 @@
+
+<!--
+    DEPRECATED FILE - DO NOT USE
+    
+    This file is NO LONGER USED. All reports are generated to:
+    /home/khan/OpenSource/EnterpriseScalpel/scalpel-reports/traceability-report.html
+    
+    Configuration: See scalpel.config.json > OutputDirectory
+    
+    The HTML report generation is configured in ReportService.cs GenerateHtmlReport method
+    which writes output to the 'scalpel-reports' directory as specified in the configuration.
+    
+    Original File Content Below (Archived):
+    ============================================================================
+    
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Enterprise Scalpel – Traceability Report</title>
+    <link href='https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Geist:wght@300;400;600;700&display=swap' rel='stylesheet'>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1e40af;
+            --primary-light: #eff6ff;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --neutral-900: #111827;
+            --neutral-800: #1f2937;
+            --neutral-700: #374151;
+            --neutral-600: #4b5563;
+            --neutral-200: #e5e7eb;
+            --neutral-100: #f3f4f6;
+            --neutral-50: #f9fafb;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --surface-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --surface-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(180deg, var(--neutral-50) 0%, #f0f9ff 100%);
+            color: var(--neutral-800);
+            line-height: 1.6;
+        }
+
+        /* ====== HEADER ====== */
+        header {
+            background: var(--bg-gradient);
+            color: white;
+            padding: 3rem 2rem;
+            box-shadow: var(--surface-shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            filter: blur(40px);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+            position: relative;
+            z-index: 1;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            font-size: 1rem;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ====== CONTAINER & LAYOUT ====== */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--surface-shadow);
+            border: 1px solid var(--neutral-200);
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card:hover {
+            box-shadow: var(--surface-shadow-lg);
+            transform: translateY(-2px);
+        }
+
+        .card.summary {
+            background: linear-gradient(135deg, var(--primary-light) 0%, #f0fdf4 100%);
+            border: 1px solid var(--neutral-200);
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin: 0 0 1.5rem 0;
+            color: var(--neutral-900);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            position: relative;
+        }
+
+        .card h2::after {
+            content: '';
+            flex-grow: 1;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary) 0%, transparent 100%);
+        }
+
+        /* ====== SUMMARY GRID ====== */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid var(--neutral-200);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--primary);
+        }
+
+        .stat-box:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            transform: translateY(-4px);
+        }
+
+        .stat-box .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0.5rem 0;
+        }
+
+        .stat-box .label {
+            font-size: 0.85rem;
+            color: var(--neutral-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        /* ====== TABLES ====== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+        }
+
+        th {
+            background: linear-gradient(90deg, var(--neutral-100) 0%, var(--neutral-50) 100%);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--neutral-700);
+            border-bottom: 2px solid var(--primary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--neutral-200);
+            color: var(--neutral-700);
+        }
+
+        tr:hover {
+            background: var(--neutral-50);
+            transition: background 0.2s ease;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* ====== BADGES ====== */
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 0.4rem 0.9rem;
+            border-radius: 6px;
+            margin: 0.3rem 0.3rem 0.3rem 0;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        /* ====== TICKET LINKS (PM INTEGRATION) ====== */
+        .ticket-link {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 6px 10px;
+            border-radius: 6px;
+            display: inline-block;
+            transition: all 0.2s ease;
+            margin-right: 8px;
+            border: 1px solid #e0e7ff;
+        }
+
+        .ticket-link:hover {
+            background: #e3f2fd;
+            text-decoration: none;
+            transform: translateX(2px);
+            border-color: #0066cc;
+            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.15);
+        }
+
+        .ticket-link::before {
+            content: '🔗 ';
+            opacity: 0.7;
+            margin-right: 4px;
+        }
+
+        /* Platform badges */
+        .platform-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: white;
+            vertical-align: middle;
+        }
+
+        .badge-jira {
+            background: #0052cc;
+        }
+
+        .badge-clickup {
+            background: #7b68ee;
+        }
+
+        .badge-ado {
+            background: #0078d4;
+        }
+
+        .ticket-data {
+            font-size: 0.9rem;
+            color: var(--neutral-600);
+            margin: 4px 0;
+        }
+
+        .no-ticket-data {
+            color: #999;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        .expand-btn {
+            display: inline-block;
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-left: 0.4rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+        }
+
+        .expand-btn:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        .expanded-badges {
+            display: inline-block;
+            margin-left: 0.75rem;
+            padding: 0.75rem;
+            background: var(--neutral-100);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+
+        /* ====== CODE & CELLS ====== */
+        code {
+            background: var(--neutral-100);
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--primary-dark);
+            border: 1px solid var(--neutral-200);
+        }
+
+        .commit-hash {
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: var(--neutral-800);
+            word-break: break-word;
+        }
+
+        .file-row[data-risk='5'],
+        .file-row[data-risk='6'] {
+            background: rgba(239, 68, 68, 0.05) !important;
+        }
+
+        .file-row[data-risk='3'],
+        .file-row[data-risk='4'] {
+            background: rgba(245, 158, 11, 0.05) !important;
+        }
+
+        .risk-cell {
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .method-name {
+            font-weight: 600;
+            color: var(--neutral-800);
+            font-family: 'Space Mono', monospace;
+        }
+
+        .file-ref, .lines, .changes {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--neutral-600);
+        }
+
+        /* ====== METADATA ====== */
+        .metadata {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .metadata-item {
+            padding: 1.25rem;
+            background: linear-gradient(135deg, var(--primary-light) 0%, #fef2f2 100%);
+            border-radius: 10px;
+            border-left: 4px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .metadata-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        }
+
+        .metadata-item strong {
+            display: block;
+            color: var(--neutral-900);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metadata-item span {
+            color: var(--neutral-600);
+            word-break: break-all;
+            font-size: 0.95rem;
+        }
+
+        /* ====== RESPONSIVE ====== */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            header {
+                padding: 2rem 1.5rem;
+            }
+
+            header h1 {
+                font-size: 1.75rem;
+            }
+
+            table {
+                font-size: 0.9rem;
+            }
+
+            th, td {
+                padding: 0.75rem;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .stat-box .number {
+                font-size: 2rem;
+            }
+
+            .metadata {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ====== ANIMATIONS ====== */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .card {
+            animation: fadeIn 0.5s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📊 Enterprise Scalpel</h1>
+        <p>Requirement Traceability & Impact Analysis Report</p>
+    </header>
+
+    <div class='container'>
+        
+        Summary Card
+        <div class='card summary'>
+            <h2>📈 Analysis Summary</h2>
+            <div class='summary-grid'>
+                <div class='stat-box'>
+                    <div class='label'>Requirements</div>
+                    <div class='number'>11</div>
+                </div>
+                <div class='stat-box'>
+                    <div class='label'>Commits</div>
+                    <div class='number'>11</div>
+                </div>
+                <div class='stat-box'>
+                    <div class='label'>Files</div>
+                    <div class='number'>24</div>
+                </div>
+                <div class='stat-box'>
+                    <div class='label'>Methods</div>
+                    <div class='number'>0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Commit to Requirements -->
+        <div class='card'>
+            <h2>🔗 Commits to Requirements</h2>
+            <p style='color: var(--neutral-600); margin-bottom: 1rem; font-size: 0.9rem;'>Mapping of commits to their associated requirements</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Commit Hash</th>
+                        <th>Requirements</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class='commit-row'><td class='commit-hash'><code>63d87ce9</code></td><td><span class='badge'>REQ-122</span></td></tr><tr class='commit-row'><td class='commit-hash'><code>ad4b7694</code></td><td><span class='badge'>REQ-121</span></td></tr><tr class='commit-row'><td class='commit-hash'><code>e727dca2</code></td><td><span class='badge'>REQ-120</span></td></tr><tr class='commit-row'><td class='commit-hash'><code>00d73105</code></td><td><span class='badge'>REQ-119</span></td></tr><tr class='commit-row'><td class='commit-hash'><code>d394f272</code></td><td><span class='badge'>REQ-118</span></td></tr><tr class='commit-row'><td class='commit-hash'><code>e2ec886c</code></td><td><span class='badge'>REQ-117</span></td></tr><tr class='commit-row'><td class='commit-hash'><code>a4747c4e</code></td><td><span class='badge'>REQ-116</span></td></tr><tr class='commit-row'><td class='commit-hash'><code>94c67587</code></td><td><span class='badge'>REQ-115</span></td></tr><tr class='commit-row'><td class='commit-hash'><code>321a5aef</code></td><td><span class='badge'>REQ-114</span></td></tr><tr class='commit-row'><td class='commit-hash'><code>5016f6cd</code></td><td><span class='badge'>REQ-112</span></td></tr><tr class='commit-row'><td class='commit-hash'><code>c4bca5ce</code></td><td><span class='badge'>REQ-111</span></td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- File to Requirements -->
+        <div class='card'>
+            <h2>📁 Files to Requirements</h2>
+            <p style='color: var(--neutral-600); margin-bottom: 1rem; font-size: 0.9rem;'>Source files mapped to their requirements and risk levels</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>File Path</th>
+                        <th>Requirements</th>
+                        <th>Risk Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class='file-row' data-risk='6'><td class='file-name'>Program.cs</td><td><span class='badge'>REQ-118</span><button class='expand-btn' onclick='expandBadges(this)'>+6</button><div class='expanded-badges' style='display:none'><span class='badge'>REQ-117</span><span class='badge'>REQ-116</span><span class='badge'>REQ-115</span><span class='badge'>REQ-114</span><span class='badge'>REQ-112</span><span class='badge'>REQ-111</span></div></td><td class='risk-cell'>Critical</td></tr><tr class='file-row' data-risk='3'><td class='file-name'>Services/EnterpriseScalpel.cs</td><td><span class='badge'>REQ-122</span><span class='badge'>REQ-120</span><span class='badge'>REQ-118</span></td><td class='risk-cell'>Medium</td></tr><tr class='file-row' data-risk='3'><td class='file-name'>wwwroot/app.js</td><td><span class='badge'>REQ-122</span><span class='badge'>REQ-120</span><span class='badge'>REQ-116</span></td><td class='risk-cell'>Medium</td></tr><tr class='file-row' data-risk='3'><td class='file-name'>wwwroot/index.html</td><td><span class='badge'>REQ-122</span><span class='badge'>REQ-119</span><span class='badge'>REQ-116</span></td><td class='risk-cell'>Medium</td></tr><tr class='file-row' data-risk='3'><td class='file-name'>EnterpriseScalpel.csproj</td><td><span class='badge'>REQ-116</span><span class='badge'>REQ-112</span><span class='badge'>REQ-111</span></td><td class='risk-cell'>Medium</td></tr><tr class='file-row' data-risk='3'><td class='file-name'>.gitignore</td><td><span class='badge'>REQ-122</span><span class='badge'>REQ-111</span></td><td class='risk-cell'>Medium</td></tr><tr class='file-row' data-risk='3'><td class='file-name'>Models/GenerateRequest.cs</td><td><span class='badge'>REQ-122</span><span class='badge'>REQ-118</span></td><td class='risk-cell'>Medium</td></tr><tr class='file-row' data-risk='3'><td class='file-name'>Services/ReportService.cs</td><td><span class='badge'>REQ-122</span><span class='badge'>REQ-118</span></td><td class='risk-cell'>Medium</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Models/PMIntegration.Core.cs</td><td><span class='badge'>REQ-122</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Models/PMIntegration.Factory.cs</td><td><span class='badge'>REQ-122</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Models/PMIntegration.Manager.cs</td><td><span class='badge'>REQ-122</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Services/PMIntegration.AzureDevOps.cs</td><td><span class='badge'>REQ-122</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Services/PMIntegration.ClickUp.cs</td><td><span class='badge'>REQ-122</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Services/PMIntegration.Jira.cs</td><td><span class='badge'>REQ-122</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>README.md</td><td><span class='badge'>REQ-121</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Logging/ConsoleLogger.cs</td><td><span class='badge'>REQ-118</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Logging/ILogger.cs</td><td><span class='badge'>REQ-118</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Models/AnalysisResult.cs</td><td><span class='badge'>REQ-118</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Models/Configuration.cs</td><td><span class='badge'>REQ-118</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Models/Hotspot.cs</td><td><span class='badge'>REQ-118</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Models/MethodInfo.cs</td><td><span class='badge'>REQ-118</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>Models/RequirementImpact.cs</td><td><span class='badge'>REQ-118</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>wwwroot/styles.css</td><td><span class='badge'>REQ-116</span></td><td class='risk-cell'>Low</td></tr><tr class='file-row' data-risk='1'><td class='file-name'>EnterpriseScalpel.sln</td><td><span class='badge'>REQ-112</span></td><td class='risk-cell'>Low</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PM Integration Section (if tickets available) -->
+        
+
+        <!-- Method Traceability -->
+        <div class='card'>
+            <h2>⚙️ Method Traceability</h2>
+            <p style='color: var(--neutral-600); margin-bottom: 1rem; font-size: 0.9rem;'>Methods tracked by requirements with change history</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Method Name</th>
+                        <th>File</th>
+                        <th>Lines</th>
+                        <th>Changes</th>
+                        <th>Requirements</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Metadata -->
+        <div class='card'>
+            <h2>📅 Report Metadata</h2>
+            <div class='metadata'>
+                <div class='metadata-item'>
+                    <strong>Analysis Date</strong>
+                    <span>2026-03-22 16:31:58</span>
+                </div>
+                <div class='metadata-item'>
+                    <strong>Repository Path</strong>
+                    <span>/home/khan/OpenSource/EnterpriseScalpel</span>
+                </div>
+                <div class='metadata-item'>
+                    <strong>Filtered Requirement</strong>
+                    <span>None - Full Analysis</span>
+                </div>
+                <div class='metadata-item'>
+                    <strong>Report Type</strong>
+                    <span>Complete Traceability Analysis</span>
+        document.querySelectorAll('table tbody tr').forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.boxShadow = 'inset 0 0 10px rgba(59, 130, 246, 0.1)';
+            });
+            row.addEventListener('mouseleave', function() {
+                this.style.boxShadow = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
+    ============================================================================
+    End of Archived Content
+-->

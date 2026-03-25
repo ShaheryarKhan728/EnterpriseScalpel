@@ -19,6 +19,12 @@ pm-integration.config.ado.example.json
 pm-integration.config.clickup.example.json
 pm-integration.config.jira.example.json
 pm-integration.config.template.json
+CODEBASE_EXPLORATION.md
+dotnet-install.sh
+INTERACTIVE_FEATURES_TEST.md
+PM_INTEGRATION_IMPLEMENTATION.md
+REPORT_FILE_LOCATION.md
+traceability-report.md
 
 # AI/Prompt Instructions
 .github/prompts/plan-pmPlatformIntegration.prompt.md

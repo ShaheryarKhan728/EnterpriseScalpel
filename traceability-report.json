@@ -1,0 +1,133 @@
+{
+  "CommitToRequirements": {
+    "63d87ce967e0fa1b0350c2a28dc83baac32adac3": [
+      "REQ-122"
+    ],
+    "ad4b7694a6523000b9c5e3ae47d2d9d922624db0": [
+      "REQ-121"
+    ],
+    "e727dca2b4702018bff6d5341bc130689f617fd0": [
+      "REQ-120"
+    ],
+    "00d73105eba411bbf565251201e7b425c13cdeaa": [
+      "REQ-119"
+    ],
+    "d394f272294ca781439a2aeff499bcc4d441c670": [
+      "REQ-118"
+    ],
+    "e2ec886c743419f55c30d9b9cf07c2e3ae50d5ef": [
+      "REQ-117"
+    ],
+    "a4747c4ef6105fa113b2b108e8831a8c76429a2f": [
+      "REQ-116"
+    ],
+    "94c67587c3ddf90ca50eec68fb8e268d7cc5b90a": [
+      "REQ-115"
+    ],
+    "321a5aef702acd045e7c31116a53be5d8512a49c": [
+      "REQ-114"
+    ],
+    "5016f6cdd7c97a449214fb3c3e844341c3a9b785": [
+      "REQ-112"
+    ],
+    "c4bca5ce3b3a2c694cd22e6d9ade4637b972d27a": [
+      "REQ-111"
+    ]
+  },
+  "FileToRequirements": {
+    ".gitignore": [
+      "REQ-122",
+      "REQ-111"
+    ],
+    "Models/GenerateRequest.cs": [
+      "REQ-122",
+      "REQ-118"
+    ],
+    "Models/PMIntegration.Core.cs": [
+      "REQ-122"
+    ],
+    "Models/PMIntegration.Factory.cs": [
+      "REQ-122"
+    ],
+    "Models/PMIntegration.Manager.cs": [
+      "REQ-122"
+    ],
+    "Services/EnterpriseScalpel.cs": [
+      "REQ-122",
+      "REQ-120",
+      "REQ-118"
+    ],
+    "Services/PMIntegration.AzureDevOps.cs": [
+      "REQ-122"
+    ],
+    "Services/PMIntegration.ClickUp.cs": [
+      "REQ-122"
+    ],
+    "Services/PMIntegration.Jira.cs": [
+      "REQ-122"
+    ],
+    "Services/ReportService.cs": [
+      "REQ-122",
+      "REQ-118"
+    ],
+    "wwwroot/app.js": [
+      "REQ-122",
+      "REQ-120",
+      "REQ-116"
+    ],
+    "wwwroot/index.html": [
+      "REQ-122",
+      "REQ-119",
+      "REQ-116"
+    ],
+    "README.md": [
+      "REQ-121"
+    ],
+    "Logging/ConsoleLogger.cs": [
+      "REQ-118"
+    ],
+    "Logging/ILogger.cs": [
+      "REQ-118"
+    ],
+    "Models/AnalysisResult.cs": [
+      "REQ-118"
+    ],
+    "Models/Configuration.cs": [
+      "REQ-118"
+    ],
+    "Models/Hotspot.cs": [
+      "REQ-118"
+    ],
+    "Models/MethodInfo.cs": [
+      "REQ-118"
+    ],
+    "Models/RequirementImpact.cs": [
+      "REQ-118"
+    ],
+    "Program.cs": [
+      "REQ-118",
+      "REQ-117",
+      "REQ-116",
+      "REQ-115",
+      "REQ-114",
+      "REQ-112",
+      "REQ-111"
+    ],
+    "EnterpriseScalpel.csproj": [
+      "REQ-116",
+      "REQ-112",
+      "REQ-111"
+    ],
+    "wwwroot/styles.css": [
+      "REQ-116"
+    ],
+    "EnterpriseScalpel.sln": [
+      "REQ-112"
+    ]
+  },
+  "MethodToRequirements": null,
+  "AnalysisDate": "2026-03-22T16:31:58.3313679+05:00",
+  "RepositoryPath": "/home/khan/OpenSource/EnterpriseScalpel",
+  "RepositoryPaths": null,
+  "FilteredByRequirementId": null
+}

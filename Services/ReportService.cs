@@ -39,7 +39,7 @@ namespace Scalpel.Enterprise
             };
         }
 
-        public string GenerateHtmlReport(AnalysisResult analysis, Dictionary<string, PMTicket> ticketData = null)
+        public string GenerateHtmlReport(AnalysisResult analysis, Dictionary<string, PMTicket>? ticketData = null)
         {
             ticketData ??= new Dictionary<string, PMTicket>();
             
@@ -53,27 +53,43 @@ namespace Scalpel.Enterprise
                 }
             }
 
-            // Generate commit rows
+            // Generate commit rows - show only 5 with see more button
+            var totalCommits = analysis.CommitToRequirements.Count;
+            var visibleCommits = Math.Min(5, totalCommits);
+            
             var commitRows = string.Join("", analysis.CommitToRequirements
-    .Take(50)
-    .Select(kvp => {
-
-        var reqs = kvp.Value;
-
-        // Extract actual commit hash
-        var fullKey = kvp.Key;
-        var commitHash = fullKey.Contains(":")
-            ? fullKey.Split(':')[1]
-            : fullKey;
-
-        var commitShort = commitHash.Length > 8
-            ? commitHash.Substring(0, 8)
-            : commitHash;
-
-        var badgesHtml = GenerateBadgeHtml(reqs);
-
-        return $"<tr class='commit-row'><td class='commit-hash'><code>{commitShort}</code></td><td>{badgesHtml}</td></tr>";
-    }));
+                .Take(visibleCommits)
+                .Select(kvp => {
+                    var reqs = kvp.Value;
+                    var fullKey = kvp.Key;
+                    var commitHash = fullKey.Contains(":")
+                        ? fullKey.Split(':')[1]
+                        : fullKey;
+                    var commitShort = commitHash.Length > 8
+                        ? commitHash.Substring(0, 8)
+                        : commitHash;
+                    var badgesHtml = GenerateBadgeHtml(reqs, ticketData);
+                    return $"<tr class='commit-row'><td class='commit-hash'><code>{commitShort}</code></td><td>{badgesHtml}</td></tr>";
+                }));
+            
+            // Add hidden rows for remaining commits
+            var hiddenCommitRows = string.Join("", analysis.CommitToRequirements
+                .Skip(visibleCommits)
+                .Select(kvp => {
+                    var reqs = kvp.Value;
+                    var fullKey = kvp.Key;
+                    var commitHash = fullKey.Contains(":")
+                        ? fullKey.Split(':')[1]
+                        : fullKey;
+                    var commitShort = commitHash.Length > 8
+                        ? commitHash.Substring(0, 8)
+                        : commitHash;
+                    var badgesHtml = GenerateBadgeHtml(reqs, ticketData);
+                    return $"<tr class='commit-row hidden-row'><td class='commit-hash'><code>{commitShort}</code></td><td>{badgesHtml}</td></tr>";
+                }));
+            
+            var commitTableRows = commitRows + hiddenCommitRows;
+            var seeMoreCommitsBtn = totalCommits > visibleCommits ? $"<tr><td colspan='2' style='text-align:center; padding: 1rem;'><button onclick='toggleCommitRows(event)' class='see-more-btn' data-state='hidden'>See More ({totalCommits - visibleCommits} more)</button></td></tr>" : "";
 
             // Generate file rows
             var fileRows = string.Join("", analysis.FileToRequirements
@@ -81,7 +97,7 @@ namespace Scalpel.Enterprise
                 .Select(kvp => {
                     var reqs = kvp.Value.ToList();
                     var riskLevel = GetRiskLevel(reqs.Count);
-                    var badgesHtml = GenerateBadgeHtml(reqs);
+                    var badgesHtml = GenerateBadgeHtml(reqs, ticketData);
                     return $"<tr class='file-row' data-risk='{GetRiskNumericValue(reqs.Count)}'><td class='file-name'>{kvp.Key}</td><td>{badgesHtml}</td><td class='risk-cell'>{riskLevel}</td></tr>";
                 }));
 
@@ -94,7 +110,7 @@ namespace Scalpel.Enterprise
                     var methodName = method.MethodName;
                     var fileName = Path.GetFileName(method.FilePath);
                     var reqs = method.Requirements?.ToList() ?? new List<string>();
-                    var badgesHtml = GenerateBadgeHtml(reqs);
+                    var badgesHtml = GenerateBadgeHtml(reqs, ticketData);
                     return $"<tr class='method-row'><td class='method-name'>{methodName}</td><td class='file-ref'>{fileName}</td><td class='lines'>{method.LineStart} - {method.LineEnd}</td><td class='changes'>{method.ChangeCount}</td><td>{badgesHtml}</td></tr>";
                 }));
 
@@ -339,6 +355,27 @@ namespace Scalpel.Enterprise
             box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
         }}
 
+        /* ====== BADGE LINKS (PM INTEGRATION) ====== */
+        .badge-link {{
+            text-decoration: none;
+            cursor: pointer;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }}
+
+        .badge-link:hover {{
+            text-decoration: none;
+        }}
+
+        .badge-link .badge {{
+            transition: all 0.3s ease;
+        }}
+
+        .badge-link:hover .badge {{
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
+        }}
+
         /* ====== TICKET LINKS (PM INTEGRATION) ====== */
         .ticket-link {{
             color: #0066cc;
@@ -432,6 +469,28 @@ namespace Scalpel.Enterprise
             background: var(--neutral-100);
             border-radius: 8px;
             border-left: 3px solid var(--primary);
+        }}
+
+        .hidden-row {{
+            display: none;
+        }}
+
+        .see-more-btn {{
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+        }}
+
+        .see-more-btn:hover {{
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }}
 
         /* ====== CODE & CELLS ====== */
@@ -619,7 +678,8 @@ namespace Scalpel.Enterprise
                     </tr>
                 </thead>
                 <tbody>
-                    {commitRows}
+                    {commitTableRows}
+                    {seeMoreCommitsBtn}
                 </tbody>
             </table>
         </div>
@@ -707,6 +767,7 @@ namespace Scalpel.Enterprise
                 <div class='metadata-item'>
                     <strong>Report Type</strong>
                     <span>{(ticketData.Count > 0 ? "✨ Enriched with PM Data" : "Complete Traceability Analysis")}</span>
+        <script>
         document.querySelectorAll('table tbody tr').forEach(row => {{
             row.addEventListener('mouseenter', function() {{
                 this.style.boxShadow = 'inset 0 0 10px rgba(59, 130, 246, 0.1)';
@@ -715,22 +776,72 @@ namespace Scalpel.Enterprise
                 this.style.boxShadow = 'none';
             }});
         }});
+
+        // Expand badge details
+        function expandBadges(btn) {{
+            var expandedDiv = btn.nextElementSibling;
+            if (expandedDiv && expandedDiv.classList.contains('expanded-badges')) {{
+                var computedStyle = window.getComputedStyle(expandedDiv);
+                var isHidden = computedStyle.display === 'none';
+                
+                if (isHidden) {{
+                    expandedDiv.style.display = 'inline-block';
+                    var count = expandedDiv.querySelectorAll('.badge').length;
+                    btn.textContent = '-' + count;
+                    btn.style.background = '#dc2626';
+                    btn.style.color = 'white';
+                }} else {{
+                    expandedDiv.style.display = 'none';
+                    var count = expandedDiv.querySelectorAll('.badge').length;
+                    btn.textContent = '+' + count;
+                    btn.style.background = '#ef4444';
+                    btn.style.color = 'white';
+                }}
+            }}
+        }}
+
+        // Toggle commit rows visibility
+        function toggleCommitRows(event) {{
+            event.preventDefault();
+            var btn = event.target;
+            var hiddenRows = document.querySelectorAll('tr.hidden-row');
+            var isHidden = btn.getAttribute('data-state') === 'hidden';
+            
+            hiddenRows.forEach(row => {{
+                row.style.display = isHidden ? 'table-row' : 'none';
+            }});
+            
+            btn.setAttribute('data-state', isHidden ? 'visible' : 'hidden');
+            btn.textContent = isHidden ? 'See Less' : ('See More (' + (hiddenRows.length) + ' more)');
+        }}
     </script>
 </body>
 </html>";
         }
 
-        private string GenerateBadgeHtml(List<string> reqs)
+        private string GenerateBadgeHtml(List<string> reqs, Dictionary<string, PMTicket>? ticketData = null)
         {
+            ticketData ??= new Dictionary<string, PMTicket>();
+            
+            // Helper function to generate badge HTML (clickable if PM data available)
+            Func<string, string> GenerateBadge = (req) =>
+            {
+                if (ticketData.TryGetValue(req, out var ticket) && !string.IsNullOrEmpty(ticket.Url))
+                {
+                    return $"<a href='{ticket.Url}' target='_blank' class='badge-link'><span class='badge'>{req}</span></a>";
+                }
+                return $"<span class='badge'>{req}</span>";
+            };
+
             if (reqs.Count <= 3)
             {
-                return string.Join("", reqs.Select(r => $"<span class='badge'>{r}</span>"));
+                return string.Join("", reqs.Select(GenerateBadge));
             }
 
-            var badgesHtml = $"<span class='badge'>{reqs[0]}</span>" +
+            var badgesHtml = GenerateBadge(reqs[0]) +
                            $"<button class='expand-btn' onclick='expandBadges(this)'>+{reqs.Count - 1}</button>" +
                            $"<div class='expanded-badges' style='display:none'>" +
-                           string.Join("", reqs.Skip(1).Select(r => $"<span class='badge'>{r}</span>")) +
+                           string.Join("", reqs.Skip(1).Select(GenerateBadge)) +
                            $"</div>";
             return badgesHtml;
         }
@@ -767,14 +878,14 @@ namespace Scalpel.Enterprise
             html += $"<td><strong>{requirement}</strong></td>";
 
             // Ticket cell with clickable link
-            if (hasTicketData && !string.IsNullOrEmpty(ticket.Url))
+            if (hasTicketData && ticket is not null && !string.IsNullOrEmpty(ticket.Url))
             {
                 var platformBadgeClass = ticket.Url.Contains("atlassian") ? "badge-jira" :
                                         ticket.Url.Contains("clickup") ? "badge-clickup" : "badge-ado";
 
                 html += "<td>";
                 html += $"<a href='{EscapeHtml(ticket.Url)}' target='_blank' class='ticket-link' title='Open {ticket.Platform} ticket'>";
-                html += $"{EscapeHtml(ticket.Key)}: {EscapeHtml(ticket.Title)}";
+                html += $"{EscapeHtml(ticket.Key ?? "N/A")}: {EscapeHtml(ticket.Title ?? "N/A")}";
                 html += "</a>";
                 html += $"<span class='platform-badge {platformBadgeClass}'>{ticket.Platform}</span>";
                 html += "</td>";
@@ -797,10 +908,10 @@ namespace Scalpel.Enterprise
             return html;
         }
 
-        private string EscapeHtml(string text)
+        private string EscapeHtml(string? text)
         {
             if (string.IsNullOrEmpty(text))
-                return text;
+                return text ?? "";
 
             return text
                 .Replace("&", "&amp;")

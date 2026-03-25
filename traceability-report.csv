@@ -1,0 +1,25 @@
+File,Requirements,Risk Level,Change Count
+"Program.cs","REQ-118;REQ-117;REQ-116;REQ-115;REQ-114;REQ-112;REQ-111","🔴 Critical",7
+"Services/EnterpriseScalpel.cs","REQ-122;REQ-120;REQ-118","🟡 Medium",3
+"wwwroot/app.js","REQ-122;REQ-120;REQ-116","🟡 Medium",3
+"wwwroot/index.html","REQ-122;REQ-119;REQ-116","🟡 Medium",3
+"EnterpriseScalpel.csproj","REQ-116;REQ-112;REQ-111","🟡 Medium",3
+".gitignore","REQ-122;REQ-111","🟡 Medium",2
+"Models/GenerateRequest.cs","REQ-122;REQ-118","🟡 Medium",2
+"Services/ReportService.cs","REQ-122;REQ-118","🟡 Medium",2
+"Models/PMIntegration.Core.cs","REQ-122","🟢 Low",1
+"Models/PMIntegration.Factory.cs","REQ-122","🟢 Low",1
+"Models/PMIntegration.Manager.cs","REQ-122","🟢 Low",1
+"Services/PMIntegration.AzureDevOps.cs","REQ-122","🟢 Low",1
+"Services/PMIntegration.ClickUp.cs","REQ-122","🟢 Low",1
+"Services/PMIntegration.Jira.cs","REQ-122","🟢 Low",1
+"README.md","REQ-121","🟢 Low",1
+"Logging/ConsoleLogger.cs","REQ-118","🟢 Low",1
+"Logging/ILogger.cs","REQ-118","🟢 Low",1
+"Models/AnalysisResult.cs","REQ-118","🟢 Low",1
+"Models/Configuration.cs","REQ-118","🟢 Low",1
+"Models/Hotspot.cs","REQ-118","🟢 Low",1
+"Models/MethodInfo.cs","REQ-118","🟢 Low",1
+"Models/RequirementImpact.cs","REQ-118","🟢 Low",1
+"wwwroot/styles.css","REQ-116","🟢 Low",1
+"EnterpriseScalpel.sln","REQ-112","🟢 Low",1

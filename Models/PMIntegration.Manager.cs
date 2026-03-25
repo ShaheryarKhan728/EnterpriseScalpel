@@ -107,20 +107,11 @@ namespace Scalpel.Enterprise
                 return cacheEntry.Ticket;
             }
 
-            // Fetch from platform
+            // Generate task URL without API call
             try
             {
-                _logger.Info($"Searching PM platform for {requirementId}");
-                var results = await _platform.SearchTicketsByRequirementAsync(requirementId);
-
-                if (results == null || results.Count == 0)
-                {
-                    _logger.Warning($"No PM ticket found for {requirementId}");
-                    return null;
-                }
-
-                // Return first match (most relevant)
-                var ticket = results[0];
+                _logger.Info($"Generating task URL for {requirementId}");
+                var ticket = GenerateTaskUrlTicket(requirementId);
                 ticket.Platform = _config.Platform;
 
                 // Update cache
@@ -130,19 +121,52 @@ namespace Scalpel.Enterprise
                     ExpiresAt = DateTime.UtcNow.AddMinutes(_config.CacheTtlMinutes)
                 };
 
-                _logger.Info($"Found PM ticket for {requirementId}: {ticket.Key}");
+                _logger.Info($"Generated task URL for {requirementId}: {ticket.Url}");
                 return ticket;
-            }
-            catch (PMIntegrationException ex)
-            {
-                _logger.Warning($"PM integration error for {requirementId}: {ex.Message}");
-                return null;
             }
             catch (Exception ex)
             {
-                _logger.Warning($"Error fetching PM data for {requirementId}: {ex.Message}");
+                _logger.Warning($"Error generating task URL for {requirementId}: {ex.Message}");
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Generate a PMTicket with task URL based on platform configuration
+        /// </summary>
+        private PMTicket GenerateTaskUrlTicket(string requirementId)
+        {
+            string taskUrl;
+
+            // Generate URL based on platform
+            switch (_config.Platform?.ToLower())
+            {
+                case "clickup":
+                    taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{requirementId}";
+                    break;
+                case "jira":
+                    taskUrl = $"{_config.BaseUrl}/browse/{requirementId}";
+                    break;
+                case "azuredevops":
+                case "ado":
+                    taskUrl = $"{_config.BaseUrl}/{_config.Organization}/{_config.Project}/_workitems/edit/{requirementId}";
+                    break;
+                default:
+                    taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{requirementId}";
+                    break;
+            }
+
+            return new PMTicket
+            {
+                Id = requirementId,
+                Key = requirementId,
+                Title = $"Task: {requirementId}",
+                Status = "Unknown",
+                Priority = "Normal",
+                Assignee = "Unknown",
+                Url = taskUrl,
+                Platform = _config.Platform
+            };
         }
 
         /// <summary>

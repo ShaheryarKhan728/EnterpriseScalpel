@@ -4,42 +4,487 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Enterprise Scalpel - Report Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #3b82f6;
+      --primary-dark: #1e40af;
+      --primary-light: #eff6ff;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --neutral-900: #111827;
+      --neutral-800: #1f2937;
+      --neutral-700: #374151;
+      --neutral-600: #4b5563;
+      --neutral-400: #9ca3af;
+      --neutral-300: #d1d5db;
+      --neutral-200: #e5e7eb;
+      --neutral-100: #f3f4f6;
+      --neutral-50: #f9fafb;
+      --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --surface-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --surface-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(180deg, var(--neutral-50) 0%, #f0f9ff 100%);
+      color: var(--neutral-800);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      background: var(--bg-gradient);
+      color: white;
+      padding: 3rem 2rem;
+      box-shadow: var(--surface-shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 400px;
+      height: 400px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      filter: blur(40px);
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .logo-text h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text p {
+      font-size: 0.95rem;
+      opacity: 0.9;
+      margin: 0;
+    }
+
+    header p {
+      font-size: 1.05rem;
+      opacity: 0.95;
+      max-width: 600px;
+      margin: 0;
+    }
+
+    /* Main Container */
+    .main-container {
+      max-width: 900px;
+      margin: -3rem auto 0;
+      padding: 0 2rem 4rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 2.5rem;
+      box-shadow: var(--surface-shadow-lg);
+      border: 1px solid var(--neutral-200);
+    }
+
+    /* Form Sections */
+    .form-section {
+      margin-bottom: 2.5rem;
+    }
+
+    .form-section:last-of-type {
+      margin-bottom: 0;
+    }
+
+    .section-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--neutral-600);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-divider {
+      height: 1px;
+      background: var(--neutral-200);
+      margin: 2rem 0;
+    }
+
+    /* Form Group */
+    .form-group {
+      margin-bottom: 1.75rem;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--neutral-900);
+      margin-bottom: 0.625rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .label-text {
+      flex: 1;
+    }
+
+    .label-hint {
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: var(--neutral-500);
+      margin-left: 0.5rem;
+    }
+
+    textarea,
+    select {
+      width: 100%;
+      padding: 0.875rem;
+      border: 1.5px solid var(--neutral-200);
+      border-radius: 8px;
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 0.95rem;
+      color: var(--neutral-800);
+      background: white;
+      transition: all 0.3s ease;
+    }
+
+    textarea:hover,
+    select:hover {
+      border-color: var(--neutral-300);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.05);
+    }
+
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    textarea::placeholder {
+      color: var(--neutral-400);
+    }
+
+    select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234b5563' d='M1 4l5 4 5-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.875rem center;
+      padding-right: 2.5rem;
+      appearance: none;
+    }
+
+    select:hover {
+      background-color: var(--neutral-50);
+    }
+
+    /* Config Group */
+    .config-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 640px) {
+      .config-group {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 2.5rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--neutral-200);
+    }
+
+    button {
+      padding: 0.875rem 2rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: var(--surface-shadow);
+    }
+
+    button:hover {
+      background: var(--primary-dark);
+      box-shadow: var(--surface-shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      background: var(--neutral-400);
+      cursor: not-allowed;
+      opacity: 0.6;
+      transform: none;
+    }
+
+    /* Status */
+    #status {
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      display: none;
+    }
+
+    #status.success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    #status.error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    #status.loading {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Helper Text */
+    .helper-text {
+      font-size: 0.825rem;
+      color: var(--neutral-500);
+      margin-top: 0.5rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      line-height: 1.4;
+    }
+
+    .note {
+      background: var(--primary-light);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: var(--primary-dark);
+      margin-top: 2rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .note::before {
+      content: 'ℹ️';
+      flex-shrink: 0;
+      margin-top: 0.125rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      header {
+        padding: 2rem 1.5rem;
+      }
+
+      .logo-text h1 {
+        font-size: 1.5rem;
+      }
+
+      .main-container {
+        margin: -2rem auto 0;
+        padding: 0 1.5rem 3rem;
+      }
+
+      .card {
+        padding: 1.75rem;
+      }
+
+      .actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
 </head>
 <body>
-  <main class="container">
-    <h1>Enterprise Scalpel — Generate Traceability Report</h1>
-
-    <label>Requirement Id(s) (comma-separated)</label>
-    <textarea id="reqs" placeholder="REQ-123,REQ-456"></textarea>
-
-    <label>Repository Link(s) (comma or newline separated). Leave empty to analyze current repository.</label>
-    <textarea id="repos" required placeholder="https://github.com/org/repo.git\nC:\\path\\to\\local\\repo"></textarea>
-
-    <label>Requirement Pattern (regex) — optional, e.g. (?i)Req-\d+ or REQ-</label>
-    <textarea id="pattern" required placeholder="(?i)REQ-\\d+"></textarea>
-
-    <label>Output format</label>
-    <select id="format">
-      <option value="html">HTML</option>
-      <option value="json">JSON</option>
-      <option value="csv">CSV</option>
-    </select>
-
-    <label>PM Platform (optional) — Select to enrich report with ticket data</label>
-    <select id="pmPlatform">
-      <option value="">None - Skip PM Integration</option>
-      <option value="jira">JIRA</option>
-      <option value="clickup">ClickUp</option>
-      <option value="azuredevops">Azure DevOps</option>
-    </select>
-
-    <div class="actions">
-      <button id="generate">Generate report</button>
-      <span id="status" class="status"></span>
+  <header>
+    <div class="header-content">
+      <div class="logo">
+        <div class="logo-icon">🔍</div>
+        <div class="logo-text">
+          <h1>Enterprise Scalpel</h1>
+          <p>Code Traceability &amp; Impact Analysis</p>
+        </div>
+      </div>
+      <p>Generate comprehensive code traceability reports with requirement mapping and impact analysis.</p>
     </div>
+  </header>
 
-    <p class="note">When HTML is selected the result will open in a new tab. JSON/CSV will be downloaded.</p>
+  <main class="main-container">
+    <div class="card">
+      <form id="reportForm">
+        <!-- Requirements Section -->
+        <div class="form-section">
+          <h2 class="section-title">📋 Requirements</h2>
+          <div class="form-group">
+            <label for="reqs">
+              <span class="label-text">Requirement IDs</span>
+              <span class="label-hint">(optional)</span>
+            </label>
+            <textarea id="reqs" placeholder="REQ-123&#10;REQ-456&#10;REQ-789"></textarea>
+            <div class="helper-text">Enter comma or newline separated requirement IDs to filter the analysis</div>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Repository Section -->
+        <div class="form-section">
+          <h2 class="section-title">💾 Source Code</h2>
+          <div class="form-group">
+            <label for="repos">
+              <span class="label-text">Repository URL(s)</span>
+              <span class="label-hint">(required)</span>
+            </label>
+            <textarea id="repos" required placeholder="https://github.com/org/repo.git&#10;"></textarea>
+            <!-- <div class="helper-text">Leave empty to analyze the current repository. Supports GitHub URLs and local paths</div> -->
+          </div>
+
+          <div class="form-group">
+            <label for="pattern">
+              <span class="label-text">Requirement Pattern</span>
+              <span class="label-hint">(regex)</span>
+            </label>
+            <textarea id="pattern" required placeholder="(?i)REQ-\d+"></textarea>
+            <div class="helper-text">Regular expression to identify requirement IDs in code. Examples: (?i)Req-\d+, REQ-, JIRA-\d+</div>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Output Section -->
+        <div class="form-section">
+          <h2 class="section-title">⚙️ Output &amp; Integration</h2>
+          <div class="config-group">
+            <div class="form-group">
+              <label for="format">
+                <span class="label-text">Output Format</span>
+              </label>
+              <select id="format" required>
+                <option value="html">📊 HTML Report (interactive)</option>
+                <option value="json">{ } JSON (data export)</option>
+                <option value="csv">📈 CSV (spreadsheet)</option>
+              </select>
+              <div class="helper-text">HTML opens in a new tab. JSON/CSV are downloaded</div>
+            </div>
+
+            <div class="form-group">
+              <label for="pmPlatform">
+                <span class="label-text">PM Platform</span>
+                <span class="label-hint">(optional)</span>
+              </label>
+              <select id="pmPlatform">
+                <option value="">None — Skip Integration</option>
+                <option value="jira">🔵 JIRA</option>
+                <option value="clickup">✓ ClickUp</option>
+                <option value="azuredevops">⬛ Azure DevOps</option>
+              </select>
+              <div class="helper-text">Enrich report with ticket data and requirements</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions">
+          <button id="generate" type="submit">
+            <span>Generate Report</span>
+          </button>
+          <span id="status" class="status"></span>
+        </div>
+
+        <p class="note">Your analysis will be processed locally. No data is sent to external servers.</p>
+      </form>
+    </div>
   </main>
 
   <script src="/app.js"></script>

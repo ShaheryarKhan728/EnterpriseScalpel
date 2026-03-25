@@ -1,0 +1,13 @@
+{
+  "DefaultRequirementId": "REQ-100535",
+  "RequirementPattern": "(?i)(REQ-\\d+",
+  "OutputDirectory": "scalpel-reports",
+  "ExcludePatterns": [
+    "**/bin/**",
+    "**/obj/**",
+    "**/packages/**"
+  ],
+  "RiskThresholdLow": 1,
+  "RiskThresholdMedium": 3,
+  "RiskThresholdHigh": 5
+}

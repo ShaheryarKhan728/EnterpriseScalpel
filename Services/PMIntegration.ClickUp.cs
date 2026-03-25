@@ -38,6 +38,8 @@ namespace Scalpel.Enterprise
 
             try
             {
+                // [TEMPORARILY DISABLED] API call to ClickUp - using URL template instead
+                /*
                 var url = $"{BaseUrl}/task/{ticketId}";
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
@@ -50,6 +52,23 @@ namespace Scalpel.Enterprise
                     throw new PMIntegrationException($"Could not map ClickUp task to ticket: {ticketId}");
                     
                 return ticket;
+                */
+
+                // Generate task URL using template: https://app.clickup.com/t/{WorkspaceId}/{TicketId}
+                var taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{ticketId}";
+                var ticket = new PMTicket
+                {
+                    Id = ticketId,
+                    Key = ticketId,
+                    Title = $"Task: {ticketId}",
+                    Status = "Unknown",
+                    Priority = "Normal",
+                    Assignee = "Unknown",
+                    Url = taskUrl,
+                    Platform = "ClickUp"
+                };
+
+                return await Task.FromResult(ticket);
             }
             catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -72,12 +91,14 @@ namespace Scalpel.Enterprise
 
             if (string.IsNullOrWhiteSpace(_config.ListId))
             {
-                // Cannot search without list ID
-                return new List<PMTicket>();
+                // Cannot search without list ID - fall back to URL generation
+                // return new List<PMTicket>();
             }
 
             try
             {
+                // [TEMPORARILY DISABLED] API call to ClickUp - using URL template instead
+                /*
                 var url = $"{BaseUrl}/list/{_config.ListId}/task?archived=false";
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
@@ -95,6 +116,23 @@ namespace Scalpel.Enterprise
                     .ToList() ?? new List<PMTicket>();
 
                 return matchingTasks;
+                */
+
+                // Generate task URL using template: https://app.clickup.com/t/{WorkspaceId}/{RequirementId}
+                var taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{requirementId}";
+                var ticket = new PMTicket
+                {
+                    Id = requirementId,
+                    Key = requirementId,
+                    Title = $"Task: {requirementId}",
+                    Status = "Unknown",
+                    Priority = "Normal",
+                    Assignee = "Unknown",
+                    Url = taskUrl,
+                    Platform = "ClickUp"
+                };
+
+                return await Task.FromResult(new List<PMTicket> { ticket });
             }
             catch (Exception ex)
             {
