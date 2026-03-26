@@ -36,13 +36,13 @@ internal class Program
             // Open the default browser
             try
             {
-                OpenBrowser("http://localhost:5000");
-                logger.Success("Browser opened at http://localhost:5000");
+                OpenBrowser("http://localhost:5001");
+                logger.Success("Browser opened at http://localhost:5001");
             }
             catch (Exception ex)
             {
                 logger.Warning($"Could not open browser automatically: {ex.Message}");
-                logger.Info("Please open http://localhost:5000 in your browser manually");
+                logger.Info("Please open http://localhost:5001 in your browser manually");
             }
             
             // Keep the application running

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -951,13 +952,38 @@ namespace Scalpel.Enterprise
 
         public void StartWebHost()
         {
-            var builder = WebApplication.CreateBuilder();
+            // Intelligently find wwwroot directory to work both with `dotnet run` and compiled exe
+            string contentRoot;
+            string webRoot;
             
-            // Set content root to the current directory (where the EXE is run from)
-            var contentRoot = AppContext.BaseDirectory;
-            builder.WebHost.UseWebRoot(Path.Combine(contentRoot, "wwwroot"));
-            builder.WebHost.UseContentRoot(contentRoot);
+            // First, try current working directory (when running with dotnet run from project root)
+            var cwd = Directory.GetCurrentDirectory();
+            var wwwrootInCwd = Path.Combine(cwd, "wwwroot");
             
+            if (Directory.Exists(wwwrootInCwd))
+            {
+                contentRoot = cwd;
+                webRoot = wwwrootInCwd;
+            }
+            else
+            {
+                // Fallback: navigate from assembly location (when running as exe from bin directory)
+                var exePath = AppContext.BaseDirectory;
+                // Navigate up from bin/Debug/net8/ (or bin/Release/net8/) to project root
+                var projectRoot = Path.GetFullPath(Path.Combine(exePath, "..", "..", ".."));
+                contentRoot = projectRoot;
+                webRoot = Path.Combine(projectRoot, "wwwroot");
+            }
+            
+            // Create builder with web root specified at initialization time (required in .NET 8)
+            var options = new WebApplicationOptions
+            {
+                ApplicationName = "EnterpriseScalpel",
+                ContentRootPath = contentRoot,
+                WebRootPath = webRoot
+            };
+            
+            var builder = WebApplication.CreateBuilder(options);
             var app = builder.Build();
 
             app.UseDefaultFiles();
@@ -1020,7 +1046,7 @@ namespace Scalpel.Enterprise
 
             app.MapGet("/api/health", () => Results.Json(new { status = "ok" }));
 
-            var port = 5000;
+            var port = 5001;
             _logger.Info($"Starting web server on http://localhost:{port}");
             _logger.Info($"Content root: {contentRoot}");
             _logger.Info($"Static files from: {Path.Combine(contentRoot, "wwwroot")}");
@@ -1034,7 +1060,7 @@ namespace Scalpel.Enterprise
                 _logger.Error($"Failed to start web server: {ex.Message}");
                 if (ex.Message.Contains("Address already in use"))
                 {
-                    _logger.Info("Port 5000 is already in use. Make sure you killed the previous instance.");
+                    _logger.Info("Port 5001 is already in use. Make sure you killed the previous instance.");
                 }
                 throw;
             }
