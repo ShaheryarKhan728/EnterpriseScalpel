@@ -31,7 +31,7 @@ I ran into this problem while working on enterprise systems. So I built somethin
 
 You can link requirement IDs in your reports to your project management platform, so they’re not just static references.
 
-While generating reports, you can configure your platform (e.g., ClickUp, Jira, or Azure DevOps). Once set up, every requirement ID (like PSW-1234) becomes clickable in the report.
+While generating reports, you can configure your platform (e.g., ClickUp, Jira, or Azure DevOps). Once set up, every requirement ID (like REQ-1234) becomes clickable in the report.
 
 Instead of manually searching for a task, you can just click and jump straight to it.
 
