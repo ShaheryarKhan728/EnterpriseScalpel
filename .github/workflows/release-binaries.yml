@@ -1,0 +1,82 @@
+name: Build and Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            artifact: EnterpriseScalpel
+            archive-cmd: tar czf EnterpriseScalpel-linux-x64.tar.gz -C bin/Release/net8/publish .
+            archive-name: EnterpriseScalpel-linux-x64.tar.gz
+
+          - os: ubuntu-latest
+            rid: linux-arm64
+            artifact: EnterpriseScalpel
+            archive-cmd: tar czf EnterpriseScalpel-linux-arm64.tar.gz -C bin/Release/net8/publish .
+            archive-name: EnterpriseScalpel-linux-arm64.tar.gz
+
+          - os: windows-latest
+            rid: win-x64
+            artifact: EnterpriseScalpel.exe
+            archive-cmd: 7z a EnterpriseScalpel-win-x64.zip bin/Release/net8/publish/*
+            archive-name: EnterpriseScalpel-win-x64.zip
+
+          - os: macos-latest
+            rid: osx-x64
+            artifact: EnterpriseScalpel
+            archive-cmd: tar czf EnterpriseScalpel-osx-x64.tar.gz -C bin/Release/net8/publish .
+            archive-name: EnterpriseScalpel-osx-x64.tar.gz
+
+          - os: macos-latest
+            rid: osx-arm64
+            artifact: EnterpriseScalpel
+            archive-cmd: tar czf EnterpriseScalpel-osx-arm64.tar.gz -C bin/Release/net8/publish .
+            archive-name: EnterpriseScalpel-osx-arm64.tar.gz
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build and publish
+        run: dotnet publish EnterpriseScalpel.csproj -c Release -r ${{ matrix.rid }} --self-contained
+
+      - name: Create archive (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cd bin/Release/net8/publish
+          ${{ matrix.archive-cmd }}
+          cd ../../../..
+          mv bin/Release/net8/publish/${{ matrix.archive-name }} .
+
+      - name: Create archive (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cd bin/Release/net8/publish
+          7z a ..\..\..\..\${{ matrix.archive-name }} *
+          cd ..\..\..\..\
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ matrix.archive-name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

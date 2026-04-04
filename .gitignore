@@ -5,13 +5,22 @@ x64/
 x86/
 [Bb]in/
 [Oo]bj/
+dist/
 
 # NuGet Packages
 *.nuget.props
 *.nuget.targets
 project.assets.json
 project.nuget.cache
+
+# Configuration Files with Sensitive Data
 pm-integration.config.json
+.env
+.env.local
+*.pem
+*.key
+*.pfx
+*.p12
 
 # PM Integration Documentation and Templates
 PM_INTEGRATION_GUIDE.md
@@ -19,12 +28,46 @@ pm-integration.config.ado.example.json
 pm-integration.config.clickup.example.json
 pm-integration.config.jira.example.json
 pm-integration.config.template.json
+
+# Generated Documentation (Not needed in repo)
 CODEBASE_EXPLORATION.md
-dotnet-install.sh
 INTERACTIVE_FEATURES_TEST.md
 PM_INTEGRATION_IMPLEMENTATION.md
 REPORT_FILE_LOCATION.md
+MARKET_AND_COMMERCIALIZATION_REPORT.md
+DOCKER_AND_RELEASE_GUIDE.md
+
+# Generated Reports
 traceability-report.md
+traceability-report.html
+traceability-report.json
+traceability-report.csv
+
+# Setup/Installation Scripts
+dotnet-install.sh
+
+# IDE and Editor Settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Development Environment
+/.vs/
+.vscode-server/
 
 # AI/Prompt Instructions
 .github/prompts/plan-pmPlatformIntegration.prompt.md
+
+# Node/npm (if used)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Misc
+*.log
+*.backup
+*.tmp

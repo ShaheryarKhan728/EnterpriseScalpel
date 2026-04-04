@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  scalpel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enterprisescalpel
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://0.0.0.0:5000
+    volumes:
+      # Mount current directory to allow analysis of local repositories
+      - .:/workspace
+      # Persist reports
+      - scalpel-reports:/app/scalpel-reports
+      # Optional: Mount a local reports directory to host
+      # - ./scalpel-reports:/app/scalpel-reports
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  scalpel-reports:
+    driver: local
