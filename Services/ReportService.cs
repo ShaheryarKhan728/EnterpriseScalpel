@@ -122,8 +122,8 @@ namespace Scalpel.Enterprise
 <head>
     <meta charset='UTF-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>Enterprise Scalpel – Traceability Report</title>
-    <link href='https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Geist:wght@300;400;600;700&display=swap' rel='stylesheet'>
+    <title>Trace Matrix – Traceability Report</title>
+    <link href='https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@400;500;600;700&display=swap' rel='stylesheet'>
     <style>
         * {{
             margin: 0;
@@ -132,51 +132,67 @@ namespace Scalpel.Enterprise
         }}
 
         :root {{
-            --primary: #3b82f6;
-            --primary-dark: #1e40af;
-            --primary-light: #eff6ff;
-            --danger: #ef4444;
-            --warning: #f59e0b;
+            --primary: #06b6d4;
+            --primary-dark: #0284c7;
+            --primary-light: #e0f2fe;
             --success: #10b981;
-            --neutral-900: #111827;
-            --neutral-800: #1f2937;
-            --neutral-700: #374151;
-            --neutral-600: #4b5563;
-            --neutral-200: #e5e7eb;
-            --neutral-100: #f3f4f6;
-            --neutral-50: #f9fafb;
-            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --surface-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --surface-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --slate-950: #030712;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-500: #64748b;
+            --slate-400: #94a3b8;
+            --slate-300: #cbd5e1;
+            --slate-200: #e2e8f0;
+            --slate-100: #f1f5f9;
+            --slate-50: #f8fafc;
         }}
 
         body {{
-            font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(180deg, var(--neutral-50) 0%, #f0f9ff 100%);
-            color: var(--neutral-800);
+            font-family: 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(180deg, var(--slate-900) 0%, #1a1f35 100%);
+            color: var(--slate-200);
             line-height: 1.6;
+            letter-spacing: -0.2px;
         }}
 
         /* ====== HEADER ====== */
         header {{
-            background: var(--bg-gradient);
+            background: linear-gradient(135deg, var(--slate-900) 0%, var(--slate-800) 100%);
             color: white;
-            padding: 3rem 2rem;
-            box-shadow: var(--surface-shadow-lg);
+            padding: 4rem 2rem;
             position: relative;
             overflow: hidden;
+            border-bottom: 2px solid transparent;
+            border-image: linear-gradient(90deg, transparent, var(--primary), transparent) 1;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4);
         }}
 
         header::before {{
             content: '';
             position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 400px;
-            height: 400px;
-            background: rgba(255, 255, 255, 0.1);
+            top: -60%;
+            right: -5%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 70%);
             border-radius: 50%;
-            filter: blur(40px);
+            filter: blur(60px);
+        }}
+
+        header::after {{
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(60px);
         }}
 
         header h1 {{
@@ -185,14 +201,21 @@ namespace Scalpel.Enterprise
             margin: 0 0 0.5rem 0;
             position: relative;
             z-index: 1;
-            letter-spacing: -0.5px;
+            letter-spacing: -0.8px;
+            background: linear-gradient(135deg, white 0%, rgba(255, 255, 255, 0.85) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }}
 
         header p {{
-            font-size: 1rem;
-            opacity: 0.95;
+            font-size: 1.05rem;
+            opacity: 0.85;
             position: relative;
             z-index: 1;
+            color: var(--slate-200);
+            font-weight: 400;
+            line-height: 1.7;
         }}
 
         /* ====== CONTAINER & LAYOUT ====== */
@@ -203,14 +226,26 @@ namespace Scalpel.Enterprise
         }}
 
         .card {{
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--surface-shadow);
-            border: 1px solid var(--neutral-200);
-            transition: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
+            background: linear-gradient(135deg, var(--slate-800) 0%, #1a2332 100%);
+            border-radius: 16px;
+            padding: 2.5rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(6, 182, 212, 0.12);
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
             animation: slideUp 0.6s ease-out;
+            position: relative;
+            overflow: hidden;
+        }}
+
+        .card::before {{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.2), transparent);
         }}
 
         @keyframes slideUp {{
@@ -225,23 +260,25 @@ namespace Scalpel.Enterprise
         }}
 
         .card:hover {{
-            box-shadow: var(--surface-shadow-lg);
-            transform: translateY(-2px);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.4);
+            border-color: rgba(6, 182, 212, 0.2);
+            transform: translateY(-4px);
         }}
 
         .card.summary {{
-            background: linear-gradient(135deg, var(--primary-light) 0%, #f0fdf4 100%);
-            border: 1px solid var(--neutral-200);
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(6, 182, 212, 0.05) 100%);
+            border: 1.5px solid rgba(6, 182, 212, 0.2);
         }}
 
         .card h2 {{
             font-size: 1.5rem;
             margin: 0 0 1.5rem 0;
-            color: var(--neutral-900);
+            color: white;
             display: flex;
             align-items: center;
             gap: 0.75rem;
             position: relative;
+            font-weight: 700;
         }}
 
         .card h2::after {{
@@ -260,11 +297,11 @@ namespace Scalpel.Enterprise
         }}
 
         .stat-box {{
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
+            background: linear-gradient(135deg, var(--slate-700) 0%, var(--slate-800) 100%);
+            padding: 1.75rem;
+            border-radius: 12px;
             text-align: center;
-            border: 2px solid var(--neutral-200);
+            border: 1px solid rgba(6, 182, 212, 0.15);
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
@@ -277,13 +314,14 @@ namespace Scalpel.Enterprise
             left: 0;
             width: 100%;
             height: 3px;
-            background: var(--primary);
+            background: linear-gradient(90deg, var(--primary), transparent);
         }}
 
         .stat-box:hover {{
-            border-color: var(--primary);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-            transform: translateY(-4px);
+            border-color: rgba(6, 182, 212, 0.4);
+            box-shadow: 0 10px 30px rgba(6, 182, 212, 0.15);
+            transform: translateY(-6px);
+            background: linear-gradient(135deg, var(--slate-700) 0%, var(--slate-750) 100%);
         }}
 
         .stat-box .number {{
@@ -291,13 +329,17 @@ namespace Scalpel.Enterprise
             font-weight: 700;
             color: var(--primary);
             margin: 0.5rem 0;
+            background: linear-gradient(135deg, var(--primary), #0ea5e9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }}
 
         .stat-box .label {{
-            font-size: 0.85rem;
-            color: var(--neutral-600);
+            font-size: 0.8rem;
+            color: var(--slate-400);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
             font-weight: 600;
         }}
 
@@ -309,26 +351,32 @@ namespace Scalpel.Enterprise
         }}
 
         th {{
-            background: linear-gradient(90deg, var(--neutral-100) 0%, var(--neutral-50) 100%);
-            padding: 1rem;
+            background: linear-gradient(90deg, rgba(6, 182, 212, 0.08) 0%, rgba(6, 182, 212, 0.04) 100%);
+            padding: 1.25rem;
             text-align: left;
-            font-weight: 600;
-            color: var(--neutral-700);
-            border-bottom: 2px solid var(--primary);
-            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--primary);
+            border-bottom: 2px solid rgba(6, 182, 212, 0.3);
+            font-size: 0.8rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
+            background-color: rgba(6, 182, 212, 0.08);
         }}
 
         td {{
-            padding: 1rem;
-            border-bottom: 1px solid var(--neutral-200);
-            color: var(--neutral-700);
+            padding: 1.25rem;
+            border-bottom: 1px solid rgba(6, 182, 212, 0.1);
+            color: var(--slate-200);
+            font-size: 0.95rem;
+        }}
+
+        tr {{
+            transition: all 0.2s ease;
         }}
 
         tr:hover {{
-            background: var(--neutral-50);
-            transition: background 0.2s ease;
+            background: rgba(6, 182, 212, 0.05);
+            box-shadow: inset 0 0 10px rgba(6, 182, 212, 0.08);
         }}
 
         tr:last-child td {{
@@ -338,21 +386,22 @@ namespace Scalpel.Enterprise
         /* ====== BADGES ====== */
         .badge {{
             display: inline-block;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, #0e7490 100%);
             color: white;
-            padding: 0.4rem 0.9rem;
-            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
             margin: 0.3rem 0.3rem 0.3rem 0;
-            font-size: 0.8rem;
-            font-weight: 600;
+            font-size: 0.75rem;
+            font-weight: 700;
             white-space: nowrap;
-            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
             transition: all 0.2s ease;
+            letter-spacing: 0.3px;
         }}
 
         .badge:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.35);
         }}
 
         /* ====== BADGE LINKS (PM INTEGRATION) ====== */
@@ -372,101 +421,106 @@ namespace Scalpel.Enterprise
         }}
 
         .badge-link:hover .badge {{
-            transform: translateY(-3px) scale(1.05);
-            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
+            transform: translateY(-4px) scale(1.08);
+            box-shadow: 0 8px 24px rgba(6, 182, 212, 0.4);
         }}
 
         /* ====== TICKET LINKS (PM INTEGRATION) ====== */
         .ticket-link {{
-            color: #0066cc;
+            color: var(--primary);
             text-decoration: none;
-            font-weight: 600;
-            padding: 6px 10px;
+            font-weight: 700;
+            padding: 0.5rem 0.875rem;
             border-radius: 6px;
             display: inline-block;
             transition: all 0.2s ease;
-            margin-right: 8px;
-            border: 1px solid #e0e7ff;
+            margin-right: 0.5rem;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            background: rgba(6, 182, 212, 0.08);
+            font-size: 0.85rem;
         }}
 
         .ticket-link:hover {{
-            background: #e3f2fd;
+            background: rgba(6, 182, 212, 0.15);
             text-decoration: none;
             transform: translateX(2px);
-            border-color: #0066cc;
-            box-shadow: 0 2px 8px rgba(0, 102, 204, 0.15);
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2);
         }}
 
         .ticket-link::before {{
             content: '🔗 ';
-            opacity: 0.7;
+            opacity: 0.8;
             margin-right: 4px;
         }}
 
         /* Platform badges */
         .platform-badge {{
             display: inline-block;
-            padding: 4px 10px;
+            padding: 0.4rem 0.875rem;
             border-radius: 12px;
-            font-size: 10px;
-            font-weight: bold;
-            margin-left: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 0.5rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
             color: white;
             vertical-align: middle;
         }}
 
         .badge-jira {{
-            background: #0052cc;
+            background: linear-gradient(135deg, #0052cc 0%, #003d99 100%);
         }}
 
         .badge-clickup {{
-            background: #7b68ee;
+            background: linear-gradient(135deg, #7b68ee 0%, #6f5dd9 100%);
         }}
 
         .badge-ado {{
-            background: #0078d4;
+            background: linear-gradient(135deg, #0078d4 0%, #005ba1 100%);
         }}
 
         .ticket-data {{
-            font-size: 0.9rem;
-            color: var(--neutral-600);
-            margin: 4px 0;
+            font-size: 0.85rem;
+            color: var(--slate-300);
+            margin: 0.5rem 0;
+            font-weight: 500;
         }}
 
         .no-ticket-data {{
-            color: #999;
+            color: var(--slate-500);
             font-style: italic;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }}
 
         .expand-btn {{
             display: inline-block;
-            background: var(--danger);
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
             color: white;
             border: none;
-            padding: 0.4rem 0.8rem;
+            padding: 0.5rem 1rem;
             border-radius: 6px;
             font-size: 0.8rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            margin-left: 0.4rem;
+            margin-left: 0.5rem;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+            letter-spacing: 0.3px;
         }}
 
         .expand-btn:hover {{
-            background: #dc2626;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
         }}
 
         .expanded-badges {{
             display: inline-block;
-            margin-left: 0.75rem;
-            padding: 0.75rem;
-            background: var(--neutral-100);
+            margin-left: 0.875rem;
+            margin-top: 0.875rem;
+            padding: 1rem;
+            background: rgba(6, 182, 212, 0.08);
             border-radius: 8px;
             border-left: 3px solid var(--primary);
         }}
@@ -479,67 +533,80 @@ namespace Scalpel.Enterprise
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             border: none;
-            padding: 0.6rem 1.2rem;
+            padding: 0.75rem 1.5rem;
             border-radius: 8px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+            font-size: 0.85rem;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
         }}
 
         .see-more-btn:hover {{
-            background: var(--primary-dark);
+            background: linear-gradient(135deg, var(--primary-dark) 0%, #0369a1 100%);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.35);
+        }}
+
+        .see-more-btn:active {{
+            transform: translateY(0);
         }}
 
         /* ====== CODE & CELLS ====== */
         code {{
-            background: var(--neutral-100);
-            padding: 0.3rem 0.6rem;
-            border-radius: 4px;
+            background: rgba(6, 182, 212, 0.1);
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
             font-family: 'Space Mono', monospace;
-            font-size: 0.85rem;
-            color: var(--primary-dark);
-            border: 1px solid var(--neutral-200);
+            font-size: 0.8rem;
+            color: #22d3ee;
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            font-weight: 500;
         }}
 
         .commit-hash {{
-            font-weight: 600;
-            color: var(--primary-dark);
+            font-weight: 700;
+            color: var(--primary);
+            font-family: 'Space Mono', monospace;
         }}
 
         .file-name {{
-            font-weight: 500;
-            color: var(--neutral-800);
+            font-weight: 600;
+            color: var(--slate-100);
             word-break: break-word;
+            font-family: 'Space Mono', monospace;
         }}
 
         .file-row[data-risk='5'],
         .file-row[data-risk='6'] {{
-            background: rgba(239, 68, 68, 0.05) !important;
+            background: rgba(239, 68, 68, 0.08) !important;
         }}
 
         .file-row[data-risk='3'],
         .file-row[data-risk='4'] {{
-            background: rgba(245, 158, 11, 0.05) !important;
+            background: rgba(245, 158, 11, 0.08) !important;
         }}
 
         .risk-cell {{
-            font-weight: 600;
+            font-weight: 700;
             text-align: center;
+            color: var(--primary);
         }}
 
         .method-name {{
-            font-weight: 600;
-            color: var(--neutral-800);
+            font-weight: 700;
+            color: var(--slate-100);
             font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
         }}
 
         .file-ref, .lines, .changes {{
             font-family: 'Space Mono', monospace;
-            font-size: 0.9rem;
-            color: var(--neutral-600);
+            font-size: 0.85rem;
+            color: var(--slate-300);
+            font-weight: 500;
         }}
 
         /* ====== METADATA ====== */
@@ -551,32 +618,36 @@ namespace Scalpel.Enterprise
         }}
 
         .metadata-item {{
-            padding: 1.25rem;
-            background: linear-gradient(135deg, var(--primary-light) 0%, #fef2f2 100%);
-            border-radius: 10px;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(6, 182, 212, 0.03) 100%);
+            border-radius: 12px;
             border-left: 4px solid var(--primary);
+            border: 1px solid rgba(6, 182, 212, 0.15);
             transition: all 0.3s ease;
         }}
 
         .metadata-item:hover {{
             transform: translateX(4px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+            box-shadow: 0 8px 24px rgba(6, 182, 212, 0.12);
+            border-color: rgba(6, 182, 212, 0.3);
         }}
 
         .metadata-item strong {{
             display: block;
-            color: var(--neutral-900);
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            font-size: 0.9rem;
+            color: var(--slate-100);
+            margin-bottom: 0.75rem;
+            font-weight: 700;
+            font-size: 0.8rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
+            color: var(--primary);
         }}
 
         .metadata-item span {{
-            color: var(--neutral-600);
+            color: var(--slate-300);
             word-break: break-all;
             font-size: 0.95rem;
+            font-weight: 500;
         }}
 
         /* ====== RESPONSIVE ====== */
@@ -586,24 +657,28 @@ namespace Scalpel.Enterprise
             }}
 
             .card {{
-                padding: 1.5rem;
+                padding: 1.75rem;
                 margin-bottom: 1.5rem;
             }}
 
             header {{
-                padding: 2rem 1.5rem;
+                padding: 2.5rem 1.5rem;
             }}
 
             header h1 {{
                 font-size: 1.75rem;
             }}
 
+            header p {{
+                font-size: 0.95rem;
+            }}
+
             table {{
-                font-size: 0.9rem;
+                font-size: 0.85rem;
             }}
 
             th, td {{
-                padding: 0.75rem;
+                padding: 0.875rem;
             }}
 
             .summary-grid {{
@@ -617,6 +692,11 @@ namespace Scalpel.Enterprise
 
             .metadata {{
                 grid-template-columns: 1fr;
+            }}
+
+            .badge {{
+                padding: 0.375rem 0.75rem;
+                font-size: 0.7rem;
             }}
         }}
 
@@ -633,11 +713,14 @@ namespace Scalpel.Enterprise
         .card {{
             animation: fadeIn 0.5s ease-out;
         }}
+        .traceicon {{
+            -webkit-text-fill-color: #4CAF50;
+        }}
     </style>
 </head>
 <body>
     <header>
-        <h1>📊 Enterprise Scalpel</h1>
+        <h1><span class='traceicon'>📊</span> Trace Matrix</h1>
         <p>Requirement Traceability & Impact Analysis Report</p>
     </header>
 
@@ -669,7 +752,7 @@ namespace Scalpel.Enterprise
         <!-- Commit to Requirements -->
         <div class='card'>
             <h2>🔗 Commits to Requirements</h2>
-            <p style='color: var(--neutral-600); margin-bottom: 1rem; font-size: 0.9rem;'>Mapping of commits to their associated requirements</p>
+            <p style='color: var(--slate-400); margin-bottom: 1rem; font-size: 0.9rem; font-weight: 500;'>Mapping of commits to their associated requirements</p>
             <table>
                 <thead>
                     <tr>
@@ -687,7 +770,7 @@ namespace Scalpel.Enterprise
         <!-- File to Requirements -->
         <div class='card'>
             <h2>📁 Files to Requirements</h2>
-            <p style='color: var(--neutral-600); margin-bottom: 1rem; font-size: 0.9rem;'>Source files mapped to their requirements and risk levels</p>
+            <p style='color: var(--slate-400); margin-bottom: 1rem; font-size: 0.9rem; font-weight: 500;'>Source files mapped to their requirements and risk levels</p>
             <table>
                 <thead>
                     <tr>
@@ -706,7 +789,7 @@ namespace Scalpel.Enterprise
         {(ticketData.Count > 0 ? $@"
         <div class='card'>
             <h2>✨ Requirements with PM Integration</h2>
-            <p style='color: var(--neutral-600); margin-bottom: 1rem; font-size: 0.9rem;'>Requirements enriched with ticket data from your PM platform</p>
+            <p style='color: var(--slate-400); margin-bottom: 1rem; font-size: 0.9rem; font-weight: 500;'>Requirements enriched with ticket data from your PM platform</p>
             <table>
                 <thead>
                     <tr>
@@ -731,7 +814,7 @@ namespace Scalpel.Enterprise
         <!-- Method Traceability -->
         <div class='card'>
             <h2>⚙️ Method Traceability</h2>
-            <p style='color: var(--neutral-600); margin-bottom: 1rem; font-size: 0.9rem;'>Methods tracked by requirements with change history</p>
+            <p style='color: var(--slate-400); margin-bottom: 1rem; font-size: 0.9rem; font-weight: 500;'>Methods tracked by requirements with change history</p>
             <table>
                 <thead>
                     <tr>
@@ -767,10 +850,16 @@ namespace Scalpel.Enterprise
                 <div class='metadata-item'>
                     <strong>Report Type</strong>
                     <span>{(ticketData.Count > 0 ? "✨ Enriched with PM Data" : "Complete Traceability Analysis")}</span>
-        <script>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
         document.querySelectorAll('table tbody tr').forEach(row => {{
             row.addEventListener('mouseenter', function() {{
-                this.style.boxShadow = 'inset 0 0 10px rgba(59, 130, 246, 0.1)';
+                this.style.boxShadow = 'inset 0 0 10px rgba(6, 182, 212, 0.1)';
             }});
             row.addEventListener('mouseleave', function() {{
                 this.style.boxShadow = 'none';
@@ -788,13 +877,13 @@ namespace Scalpel.Enterprise
                     expandedDiv.style.display = 'inline-block';
                     var count = expandedDiv.querySelectorAll('.badge').length;
                     btn.textContent = '-' + count;
-                    btn.style.background = '#dc2626';
+                    btn.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
                     btn.style.color = 'white';
                 }} else {{
                     expandedDiv.style.display = 'none';
                     var count = expandedDiv.querySelectorAll('.badge').length;
                     btn.textContent = '+' + count;
-                    btn.style.background = '#ef4444';
+                    btn.style.background = 'linear-gradient(135deg, var(--danger) 0%, #dc2626 100%)';
                     btn.style.color = 'white';
                 }}
             }}

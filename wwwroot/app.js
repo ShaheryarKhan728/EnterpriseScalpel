@@ -7,6 +7,53 @@ async function postGenerate(body) {
   return res;
 }
 
+// Handle sample repo button click
+document.getElementById('sampleRepo').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const sampleData = {
+    requirementIds: ['REQ-123'],
+    repositories: ['https://github.com/ShaheryarKhan728/EnterpriseScalpel'],
+    format: 'html',
+    requirementPattern: '(?i)REQ-\\d+',
+    pmPlatform: 'clickup'
+  };
+  
+  // Trigger the same generate logic
+  const btn = document.getElementById('generate');
+  const status = document.getElementById('status');
+  btn.disabled = true;
+  status.textContent = 'Working...';
+
+  try {
+    const res = await postGenerate(sampleData);
+
+    if (!res.ok) {
+      const text = await res.text();
+      status.textContent = 'Error: ' + text.substring(0, 200);
+      btn.disabled = false;
+      return;
+    }
+
+    const text = await res.text();
+    const blob = new Blob([text], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'traceability-report-sample.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    status.textContent = '✅ Downloaded sample report';
+  } catch (err) {
+    status.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 document.getElementById('generate').addEventListener('click', async () => {
   const btn = document.getElementById('generate');
   const status = document.getElementById('status');

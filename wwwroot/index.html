@@ -299,6 +299,11 @@
       box-shadow: none;
     }
 
+    #sampleRepo:hover {
+      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      box-shadow: 0 15px 35px -5px rgba(139, 92, 246, 0.4);
+    }
+
     /* Status */
     #status {
       font-size: 0.9rem;
@@ -406,7 +411,7 @@
           <p>Code Traceability &amp; Impact Analysis</p>
         </div>
       </div>
-      <p>Generate comprehensive code traceability reports with requirement mapping and impact analysis.</p>
+      <p>Point it at any Git repo. Get a full requirement traceability matrix. Works with Jira, ClickUp, and Azure DevOps. <strong style="color: #06b6d4;">C# codebases only.</strong></p>
     </div>
   </header>
 
@@ -489,10 +494,13 @@
           <button id="generate" type="submit">
             <span>Generate Report</span>
           </button>
+          <button id="sampleRepo" type="button" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.3);">
+            <span>🚀 Try with Sample Repo</span>
+          </button>
           <span id="status" class="status"></span>
         </div>
 
-        <p class="note">Your analysis will be processed locally. No data is sent to external servers.</p>
+        <p class="note"><strong>💡 Demo:</strong> Click "Try with Sample Repo" to see the tool in action with our sample repository. Supports C# codebases only.</p>
       </form>
     </div>
   </main>
