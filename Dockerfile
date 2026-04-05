@@ -1,6 +1,6 @@
 # Multi-stage build for EnterpriseScalpel
 # Stage 1: Build
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS builder
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
 
 WORKDIR /src
 
@@ -20,10 +20,10 @@ RUN dotnet build "EnterpriseScalpel.csproj" --configuration Release --no-restore
 RUN dotnet publish "EnterpriseScalpel.csproj" --configuration Release --no-build --output /app/publish
 
 # Stage 2: Runtime
-FROM mcr.microsoft.com/dotnet/runtime:8.0-alpine
+FROM mcr.microsoft.com/dotnet/sdk:8.0
 
-# Install git (required for the application to work)
-RUN apk add --no-cache git
+# Install git and wget (required for the application)
+RUN apt-get update && apt-get install -y --no-install-recommends git wget ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -33,13 +33,13 @@ COPY --from=builder /app/publish .
 # Create scalpel-reports directory for output
 RUN mkdir -p /app/scalpel-reports
 
-# Expose port
+# Expose port (Render will override with $PORT)
 EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:5000/api/health || exit 1
+  CMD wget --quiet --tries=1 -O /dev/null http://localhost:5000/api/health || exit 1
 
 # Run the application
-ENTRYPOINT ["dotnet", "EnterpriseScalpel.dll"]
+ENTRYPOINT ["dotnet", "/app/EnterpriseScalpel.dll"]
 CMD ["serve"]

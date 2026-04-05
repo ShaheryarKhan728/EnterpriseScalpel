@@ -1046,8 +1046,15 @@ namespace Scalpel.Enterprise
 
             app.MapGet("/api/health", () => Results.Json(new { status = "ok" }));
 
+            // Determine port: Priority: PORT env var > ASPNETCORE_URLS > default 5001
             var port = 5001;
-            _logger.Info($"Starting web server on http://localhost:{port}");
+            var portEnv = Environment.GetEnvironmentVariable("PORT");
+            if (!string.IsNullOrEmpty(portEnv) && int.TryParse(portEnv, out var envPort))
+            {
+                port = envPort;
+            }
+            
+            _logger.Info($"Starting web server on http://0.0.0.0:{port}");
             _logger.Info($"Content root: {contentRoot}");
             _logger.Info($"Static files from: {Path.Combine(contentRoot, "wwwroot")}");
             
@@ -1060,7 +1067,7 @@ namespace Scalpel.Enterprise
                 _logger.Error($"Failed to start web server: {ex.Message}");
                 if (ex.Message.Contains("Address already in use"))
                 {
-                    _logger.Info("Port 5001 is already in use. Make sure you killed the previous instance.");
+                    _logger.Info($"Port {port} is already in use. Try setting PORT environment variable to a different port.");
                 }
                 throw;
             }
