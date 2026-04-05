@@ -12,7 +12,6 @@ COPY "Services/" "Services/"
 COPY "wwwroot/" "wwwroot/"
 COPY "Program.cs" "."
 COPY "scalpel.config.json" "."
-COPY "pm-integration.config.json" "."
 
 # Restore and build
 RUN dotnet restore "EnterpriseScalpel.csproj"
