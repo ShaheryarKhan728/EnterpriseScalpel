@@ -18,11 +18,14 @@ document.getElementById('sampleRepo').addEventListener('click', async (e) => {
     pmPlatform: 'clickup'
   };
   
-  // Trigger the same generate logic
-  const btn = document.getElementById('generate');
+  // Get button, status, and loader elements
+  const sampleBtn = document.getElementById('sampleRepo');
   const status = document.getElementById('status');
-  btn.disabled = true;
-  status.textContent = 'Working...';
+  const loader = document.getElementById('loaderContainer');
+  
+  // Disable button and show loader
+  sampleBtn.disabled = true;
+  loader.classList.add('active');
 
   try {
     const res = await postGenerate(sampleData);
@@ -30,7 +33,10 @@ document.getElementById('sampleRepo').addEventListener('click', async (e) => {
     if (!res.ok) {
       const text = await res.text();
       status.textContent = 'Error: ' + text.substring(0, 200);
-      btn.disabled = false;
+      status.classList.add('error');
+      status.classList.remove('loading');
+      sampleBtn.disabled = false;
+      loader.classList.remove('active');
       return;
     }
 
@@ -47,10 +53,15 @@ document.getElementById('sampleRepo').addEventListener('click', async (e) => {
     URL.revokeObjectURL(url);
     
     status.textContent = '✅ Downloaded sample report';
+    status.classList.remove('loading', 'error');
+    status.classList.add('success');
   } catch (err) {
     status.textContent = 'Error: ' + err.message;
+    status.classList.add('error');
+    status.classList.remove('loading');
+    sampleBtn.disabled = false;
   } finally {
-    btn.disabled = false;
+    loader.classList.remove('active');
   }
 });
 
