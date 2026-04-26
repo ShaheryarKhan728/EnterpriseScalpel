@@ -370,6 +370,117 @@
       margin-top: 0.125rem;
     }
 
+    /* Use Cases Section */
+    .use-cases-section {
+      margin-bottom: 3rem;
+    }
+
+    .use-cases-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .use-case-card {
+      background: linear-gradient(135deg, #1a2332 0%, #212d3f 100%);
+      border: 1px solid rgba(6, 182, 212, 0.2);
+      border-radius: 12px;
+      padding: 2rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .use-case-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #06b6d4 0%, #0891b2 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .use-case-card:hover {
+      border-color: rgba(6, 182, 212, 0.4);
+      background: linear-gradient(135deg, #1f2937 0%, #273345 100%);
+      box-shadow: 0 8px 20px -5px rgba(6, 182, 212, 0.2);
+      transform: translateY(-4px);
+    }
+
+    .use-case-card:hover::before {
+      opacity: 1;
+    }
+
+    .use-case-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .use-case-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #06b6d4;
+      margin-bottom: 0.75rem;
+    }
+
+    .use-case-subtitle {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #cbd5e1;
+      margin-bottom: 0.5rem;
+    }
+
+    .use-case-subtitle strong {
+      color: #e2e8f0;
+    }
+
+    .use-case-description {
+      font-size: 0.875rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    .use-cases-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .use-cases-header h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 0.5rem;
+    }
+
+    .use-cases-header p {
+      font-size: 1.05rem;
+      color: #94a3b8;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .cta-container {
+      text-align: center;
+      margin-top: 3rem;
+    }
+
+    #requestDemoBtn {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.3);
+      padding: 1rem 2.5rem;
+      font-size: 1rem;
+    }
+
+    #requestDemoBtn:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      box-shadow: 0 15px 35px -5px rgba(16, 185, 129, 0.4);
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
       header {
@@ -416,7 +527,74 @@
   </header>
 
   <main class="main-container">
-    <div class="card">
+    <!-- Use Cases Section -->
+    <div class="card use-cases-section">
+      <div class="use-cases-header">
+        <h2>Why Choose Trace Matrix?</h2>
+        <p>Bridge the gap between code and business requirements. Empower your teams with complete visibility into change impact.</p>
+      </div>
+
+      <div class="use-cases-grid">
+        <!-- Use Case 1 -->
+        <div class="use-case-card">
+          <span class="use-case-icon">🎯</span>
+          <div class="use-case-title">Change Request Impact Analysis</div>
+          <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
+          <div class="use-case-description">During release cycles, determining which business requirements are affected by a change request is manual, error-prone, and time-consuming.</div>
+          <div class="use-case-subtitle" style="margin-top: 1rem;"><strong>The Solution:</strong></div>
+          <div class="use-case-description">Automatically identify all impacted requirements and trace breaking changes with confidence across your release pipeline.</div>
+        </div>
+
+        <!-- Use Case 2 -->
+        <div class="use-case-card">
+          <span class="use-case-icon">🏗️</span>
+          <div class="use-case-title">Microservices Architecture Visibility</div>
+          <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
+          <div class="use-case-description">No direct references between change requests and implementation across microservices, resulting in vague testing scopes and deployment risks.</div>
+          <div class="use-case-subtitle" style="margin-top: 1rem;"><strong>The Solution:</strong></div>
+          <div class="use-case-description">Get complete visibility into which services implement each change, enabling precise testing scope definition and confident deployments.</div>
+        </div>
+
+        <!-- Use Case 3 -->
+        <div class="use-case-card">
+          <span class="use-case-icon">📊</span>
+          <div class="use-case-title">Business Operation Tracking</div>
+          <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
+          <div class="use-case-description">Finding what actual business operations use changed code requires deep domain knowledge and manual investigation.</div>
+          <div class="use-case-subtitle" style="margin-top: 1rem;"><strong>The Solution:</strong></div>
+          <div class="use-case-description">Connect every code change to its business operations automatically, providing QA and stakeholders with deterministic testing scopes.</div>
+        </div>
+
+        <!-- Use Case 4 -->
+        <div class="use-case-card">
+          <span class="use-case-icon">🔗</span>
+          <div class="use-case-title">Dependency-Based Development</div>
+          <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
+          <div class="use-case-description">When developing features on top of previous change requests, manual code review is required for impact determination and timeline estimation.</div>
+          <div class="use-case-subtitle" style="margin-top: 1rem;"><strong>The Solution:</strong></div>
+          <div class="use-case-description">Automated impact analysis reveals dependencies and affected areas, accelerating development cycles and reducing surprises.</div>
+        </div>
+
+        <!-- Use Case 5 -->
+        <div class="use-case-card">
+          <span class="use-case-icon">♻️</span>
+          <div class="use-case-title">Refactoring &amp; Technical Debt</div>
+          <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
+          <div class="use-case-description">Refactoring and technical debt reduction efforts can identify breaking changes, but testing scope remains uncertain and driven by guesswork.</div>
+          <div class="use-case-subtitle" style="margin-top: 1rem;"><strong>The Solution:</strong></div>
+          <div class="use-case-description">Define comprehensive testing scopes based on actual business impact, not imaginary blast radius. Refactor with confidence.</div>
+        </div>
+      </div>
+
+      <div class="cta-container">
+        <button id="requestDemoBtn" type="button">
+          <span>🚀 I Want a Demo</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Demo Form Section -->
+    <div class="card" id="demoSection">
       <form id="reportForm">
         <!-- Requirements Section -->
         <div class="form-section">
@@ -505,6 +683,12 @@
     </div>
   </main>
 
+  <script>
+    // Scroll to demo section
+    document.getElementById('requestDemoBtn').addEventListener('click', function() {
+      document.getElementById('sampleRepo').scrollIntoView({ behavior: 'smooth' });
+    });
+  </script>
   <script src="/app.js"></script>
 </body>
 </html>
