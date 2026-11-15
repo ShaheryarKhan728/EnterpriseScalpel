@@ -5,6 +5,8 @@
     <TargetFramework>net8</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Runtime folders (sample repository clone, generated reports) must never be compiled or published -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);sample-repos/**;scalpel-reports/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

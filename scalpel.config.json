@@ -9,5 +9,9 @@
   ],
   "RiskThresholdLow": 1,
   "RiskThresholdMedium": 3,
-  "RiskThresholdHigh": 5
+  "RiskThresholdHigh": 5,
+  "SampleRepository": "https://github.com/ShaheryarKhan728/EnterpriseScalpel",
+  "SampleCacheDirectory": "sample-repos",
+  "SampleRefreshMinutes": 60,
+  "SampleRequirementId": "REQ-123"
 }

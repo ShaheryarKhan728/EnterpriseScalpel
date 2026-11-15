@@ -13,6 +13,14 @@ namespace Scalpel.Enterprise
         public int RiskThresholdMedium { get; set; } = 3;
         public int RiskThresholdHigh { get; set; } = 5;
 
+        // Demo/sample repository: kept permanently cloned so sample reports are fast.
+        // Set SampleRepository to null or "" to disable.
+        public string? SampleRepository { get; set; } = "https://github.com/ShaheryarKhan728/EnterpriseScalpel";
+        public string SampleCacheDirectory { get; set; } = "sample-repos";
+        public int SampleRefreshMinutes { get; set; } = 60;
+        // Requirement the demo button asks for (wwwroot/app.js); analysed at startup so the first click is instant.
+        public string? SampleRequirementId { get; set; } = "REQ-123";
+
         public static Configuration LoadFromFile(string path)
         {
             if (File.Exists(path))

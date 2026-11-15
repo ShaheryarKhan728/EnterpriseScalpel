@@ -29,8 +29,8 @@ WORKDIR /app
 # Copy published files from builder
 COPY --from=builder /app/publish .
 
-# Create scalpel-reports directory for output, owned by the non-root user
-RUN mkdir -p /app/scalpel-reports && chown -R $APP_UID /app/scalpel-reports
+# Output and sample-repository cache directories, owned by the non-root user
+RUN mkdir -p /app/scalpel-reports /app/sample-repos && chown -R $APP_UID /app/scalpel-reports /app/sample-repos
 
 # Containers must listen on all interfaces; the app defaults to loopback otherwise.
 # PORT defaults to 5000 here; platforms such as Render override it.

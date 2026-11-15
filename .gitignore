@@ -71,3 +71,5 @@ yarn.lock
 *.log
 *.backup
 *.tmp
+# Persistent clone of the demo/sample repository
+sample-repos/

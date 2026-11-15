@@ -142,7 +142,34 @@ namespace Scalpel.Enterprise
                     string workDir;
                     string display;
 
-                    if (IsRepositoryUrl(repo))
+                    var sampleDir = IsSampleRepository(repo) ? EnsureSampleClone() : null;
+                    if (sampleDir != null)
+                    {
+                        // Persistent clone: never deleted, refreshed periodically. Results are cached per
+                        // (current refs, pattern, requirement), so new commits invalidate them automatically.
+                        var cacheKey = $"{SampleRefsFingerprint(sampleDir)}|{pattern}|{requirementId}";
+                        if (!_sampleAnalysisCache.TryGetValue(cacheKey, out var cached))
+                        {
+                            var sampleCtx = new RepoContext(sampleDir, pattern);
+                            cached = string.IsNullOrEmpty(requirementId)
+                                ? PerformCompleteAnalysis(sampleCtx)
+                                : AnalyzeRequirementInRepository(sampleCtx, requirementId);
+                            if (cached != null)
+                            {
+                                cached.RepositoryPath = RedactRepository(_config.SampleRepository!);
+                                if (_sampleAnalysisCache.Count >= 50) _sampleAnalysisCache.Clear();
+                                _sampleAnalysisCache[cacheKey] = cached;
+                            }
+                        }
+                        else
+                        {
+                            _logger.Info("Using cached analysis for the sample repository");
+                        }
+
+                        if (cached != null) results.Add(cached);
+                        continue;
+                    }
+                    else if (IsRepositoryUrl(repo))
                     {
                         var (repoUrl, branchName) = ParseRepositoryUrl(repo);
                         tempDir = CloneRepository(repoUrl, branchName, allowSsh: !fromApi);
@@ -189,6 +216,89 @@ namespace Scalpel.Enterprise
             }
 
             return results;
+        }
+
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, AnalysisResult> _sampleAnalysisCache = new();
+
+        /// <summary>Hash of every ref in the sample clone; changes whenever a fetch brings new commits.</summary>
+        private static string SampleRefsFingerprint(string repoPath)
+        {
+            var refs = GitRunner.Run(new[] { "show-ref" }, repoPath, TimeSpan.FromSeconds(30)).Output;
+            var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(refs));
+            return Convert.ToHexString(hash);
+        }
+
+        private readonly object _sampleLock = new();
+        private DateTime _sampleLastRefreshUtc = DateTime.MinValue;
+
+        private static string NormalizeRepositoryUrl(string url)
+        {
+            var normalized = RedactRepository(url.Trim()).TrimEnd('/');
+            return normalized.EndsWith(".git", StringComparison.OrdinalIgnoreCase)
+                ? normalized.Substring(0, normalized.Length - 4)
+                : normalized;
+        }
+
+        /// <summary>True when the input is exactly the configured sample repository (default branch).</summary>
+        private bool IsSampleRepository(string repo) =>
+            !string.IsNullOrWhiteSpace(_config.SampleRepository)
+            && string.Equals(NormalizeRepositoryUrl(repo), NormalizeRepositoryUrl(_config.SampleRepository), StringComparison.OrdinalIgnoreCase);
+
+        private string SampleClonePath =>
+            Path.Combine(Path.GetFullPath(_config.SampleCacheDirectory), RepositoryShortName(_config.SampleRepository));
+
+        /// <summary>
+        /// Returns the path of the persistent sample clone, cloning it on first use and fetching new
+        /// commits at most every SampleRefreshMinutes. Returns null if it can't be prepared, in which
+        /// case callers fall back to a normal temporary clone.
+        /// </summary>
+        private string? EnsureSampleClone()
+        {
+            var url = _config.SampleRepository;
+            if (string.IsNullOrWhiteSpace(url) || !InputValidator.IsValidCloneUrl(url, allowSsh: false))
+                return null;
+
+            var path = SampleClonePath;
+            lock (_sampleLock)
+            {
+                try
+                {
+                    if (Directory.Exists(Path.Combine(path, ".git")))
+                    {
+                        if (DateTime.UtcNow - _sampleLastRefreshUtc >= TimeSpan.FromMinutes(Math.Max(1, _config.SampleRefreshMinutes)))
+                        {
+                            // fetch only updates refs atomically, so concurrent readers are unaffected.
+                            var fetch = GitRunner.Run(new[] { "fetch", "--prune", "--quiet", "origin" }, path, CloneTimeout);
+                            if (fetch.ExitCode == 0)
+                                _logger.Info("Sample repository refreshed");
+                            else
+                                _logger.Warning($"Could not refresh sample repository (using cached copy): {fetch.Error}");
+                            _sampleLastRefreshUtc = DateTime.UtcNow;
+                        }
+                        return path;
+                    }
+
+                    _logger.Info($"Cloning sample repository into {path}...");
+                    DeleteDirectoryQuietly(path); // clear any half-finished clone
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    var clone = GitRunner.Run(new[] { "clone", "--no-recurse-submodules", "--", url, path }, timeout: CloneTimeout);
+                    if (clone.ExitCode != 0)
+                    {
+                        _logger.Warning($"Could not clone sample repository: {(clone.TimedOut ? "timed out" : clone.Error)}");
+                        DeleteDirectoryQuietly(path);
+                        return null;
+                    }
+
+                    _sampleLastRefreshUtc = DateTime.UtcNow;
+                    _logger.Success("Sample repository ready");
+                    return path;
+                }
+                catch (Exception ex)
+                {
+                    _logger.Warning($"Sample repository unavailable: {ex.Message}");
+                    return null;
+                }
+            }
         }
 
         internal static bool AllowLocalRepositories =>
@@ -1036,6 +1146,25 @@ namespace Scalpel.Enterprise
                 _logger.Warning("The web server is reachable from other machines and has no authentication. Only expose it on a trusted network.");
             }
             _logger.Info($"Content root: {contentRoot}");
+
+            // Pre-clone the sample repository in the background so the demo button is fast from the first click.
+            if (!string.IsNullOrWhiteSpace(_config.SampleRepository))
+            {
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        if (EnsureSampleClone() == null) return;
+                        // Warm the cache with the demo button's request.
+                        AnalyzeRepositoryList(new[] { _config.SampleRepository! }, _config.SampleRequirementId, CreateConfiguredPattern(), fromApi: true);
+                        _logger.Success("Sample report pre-generated");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warning($"Could not pre-generate sample report: {ex.Message}");
+                    }
+                });
+            }
             _logger.Info($"Static files from: {Path.Combine(contentRoot, "wwwroot")}");
 
             try
