@@ -21,10 +21,21 @@ namespace Scalpel.Enterprise
             {
                 var reqs = string.Join(";", entry.Value);
                 var riskLevel = GetRiskLevel(entry.Value.Count);
-                csv.AppendLine($"\"{entry.Key}\",\"{reqs}\",\"{riskLevel}\",{entry.Value.Count}");
+                csv.AppendLine($"{CsvField(entry.Key)},{CsvField(reqs)},{CsvField(riskLevel)},{entry.Value.Count}");
             }
 
             return csv.ToString();
+        }
+
+        /// <summary>Quotes a CSV field and neutralises spreadsheet formulas (=, +, -, @ prefixes).</summary>
+        internal static string CsvField(string? value)
+        {
+            var text = value ?? string.Empty;
+            if (text.Length > 0 && "=+-@\t\r".IndexOf(text[0]) >= 0)
+            {
+                text = "'" + text;
+            }
+            return "\"" + text.Replace("\"", "\"\"") + "\"";
         }
 
         private string GetRiskLevel(int requirementCount)
@@ -103,8 +114,8 @@ namespace Scalpel.Enterprise
 
             // Generate method rows (limited to first 30)
             var methodRows = string.Join("", (analysis.MethodToRequirements ?? new Dictionary<string, MethodInfo>())
-                .Take(30)
                 .OrderByDescending(m => m.Value.ChangeCount)
+                .Take(30)
                 .Select(kvp => {
                     var method = kvp.Value;
                     var methodName = method.MethodName;

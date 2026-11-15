@@ -1059,7 +1059,7 @@ namespace Scalpel.Enterprise
             {
                 var reqs = string.Join(";", entry.Value);
                 var riskLevel = GetRiskLevel(entry.Value.Count);
-                csv.AppendLine($"\"{entry.Key}\",\"{reqs}\",\"{riskLevel}\",{entry.Value.Count}");
+                csv.AppendLine($"{ReportService.CsvField(entry.Key)},{ReportService.CsvField(reqs)},{ReportService.CsvField(riskLevel)},{entry.Value.Count}");
             }
 
             return csv.ToString();
@@ -1076,9 +1076,16 @@ namespace Scalpel.Enterprise
                 RepositoryPaths = results.Select(r => r.RepositoryPath).ToList()
             };
 
+            var usedPrefixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var result in results)
             {
-                var repoPrefix = Path.GetFileName(result.RepositoryPath) ?? "repo";
+                var repoPrefix = RepositoryShortName(result.RepositoryPath);
+                var candidate = repoPrefix;
+                for (var n = 2; !usedPrefixes.Add(candidate); n++)
+                {
+                    candidate = $"{repoPrefix}-{n}";
+                }
+                repoPrefix = candidate;
                 foreach (var (commit, reqs) in result.CommitToRequirements)
                 {
                     var key = $"{repoPrefix}:{commit}";
@@ -1111,6 +1118,18 @@ namespace Scalpel.Enterprise
             }
 
             return mergedAnalysis;
+        }
+
+        /// <summary>"https://host/org/repo.git" -> "repo", "C:\\src\\app\\" -> "app".</summary>
+        private static string RepositoryShortName(string? repository)
+        {
+            var trimmed = (repository ?? string.Empty).TrimEnd('/', '\\');
+            var name = trimmed.Substring(Math.Max(trimmed.LastIndexOfAny(new[] { '/', '\\', ':' }) + 1, 0));
+            if (name.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+            {
+                name = name.Substring(0, name.Length - 4);
+            }
+            return string.IsNullOrWhiteSpace(name) ? "repo" : name;
         }
 
         private void AnalyzeFileImpact(string filePath)
@@ -1217,12 +1236,6 @@ namespace Scalpel.Enterprise
 
             foreach (var line in lines)
             {
-                var matches = ctx.Pattern.Matches(line);
-                if (matches.Count == 0)
-                {
-                    _logger.Debug($"[C2R] No requirements found in: {line.Substring(0, Math.Min(60, line.Length))}");
-                    continue;
-                }
                 if (line.Length < 40)
                 {
                     _logger.Warning($"⚠️ [C2R] Line too short (<40 chars), skipping: {line}");
@@ -1230,6 +1243,13 @@ namespace Scalpel.Enterprise
                 }
 
                 var commitHash = line.Substring(0, 40);
+                var subject = line.Length > 41 ? line.Substring(41) : string.Empty;
+                var matches = ctx.Pattern.Matches(subject);
+                if (matches.Count == 0)
+                {
+                    _logger.Debug($"[C2R] No requirements found in: {line.Substring(0, Math.Min(60, line.Length))}");
+                    continue;
+                }
                 var requirements = matches.Select(m => m.Value).Distinct().ToList();
                 commitToRequirements[commitHash] = requirements;
                 _logger.Debug($"✓ [C2R] Commit {commitHash.Substring(0, 8)}... -> {string.Join(", ", requirements)}");
@@ -1387,7 +1407,7 @@ namespace Scalpel.Enterprise
             {
                 var reqs = string.Join(";", entry.Value);
                 var riskLevel = GetRiskLevel(entry.Value.Count);
-                csv.AppendLine($"\"{entry.Key}\",\"{reqs}\",\"{riskLevel}\",{entry.Value.Count}");
+                csv.AppendLine($"{ReportService.CsvField(entry.Key)},{ReportService.CsvField(reqs)},{ReportService.CsvField(riskLevel)},{entry.Value.Count}");
             }
 
             var path = Path.Combine(outputDir, "traceability-report.csv");
@@ -1411,7 +1431,7 @@ namespace Scalpel.Enterprise
 
             foreach (var file in analysis.FileToRequirements.Where(f => f.Value.Count > 1).OrderByDescending(f => f.Value.Count))
             {
-                md.AppendLine($"| {file.Key} | {string.Join(", ", file.Value)} | {file.Value.Count} |");
+                md.AppendLine($"| {file.Key.Replace("|", "\\|")} | {string.Join(", ", file.Value).Replace("|", "\\|")} | {file.Value.Count} |");
             }
 
             var path = Path.Combine(outputDir, "traceability-report.md");
@@ -1509,11 +1529,10 @@ namespace Scalpel.Enterprise
             return changedLineRangesByFile;
         }
 
-        private IEnumerable<MethodDeclarationSyntax> GetMethodsFromFile(string filePath)
+        private IEnumerable<MethodDeclarationSyntax> GetMethodsFromSource(string code)
         {
             try
             {
-                var code = File.ReadAllText(filePath);
                 var tree = CSharpSyntaxTree.ParseText(code);
                 var root = tree.GetRoot();
                 return root.DescendantNodes().OfType<MethodDeclarationSyntax>();
@@ -1542,7 +1561,8 @@ namespace Scalpel.Enterprise
                 var display = string.Join(' ', arguments);
                 _logger.Debug($"[GIT] Running: git {display.Substring(0, Math.Min(80, display.Length))}");
 
-                var result = GitRunner.Run(arguments, repositoryPath);
+                // core.quotePath=false keeps non-ASCII paths verbatim so they can be looked up again.
+                var result = GitRunner.Run(new[] { "-c", "core.quotePath=false" }.Concat(arguments), repositoryPath);
 
                 if (result.TimedOut)
                 {
@@ -1643,14 +1663,6 @@ namespace Scalpel.Enterprise
                 foreach (var file in filesChanged.Where(f => f.EndsWith(".cs")))
                 {
                     var normalizedFile = file.Replace("\\", "/");
-                    var absolutePath = Path.Combine(ctx.Path, file);
-                    
-                    if (!File.Exists(absolutePath))
-                    {
-                        _logger.Debug($"[M2R] File not found: {absolutePath}");
-                        continue;
-                    }
-
                     // Get line ranges for THIS specific file
                     var fileLineRanges = new List<(int start, int end)>();
                     
@@ -1675,7 +1687,15 @@ namespace Scalpel.Enterprise
 
                     try
                     {
-                        var methods = GetMethodsFromFile(absolutePath);
+                        // Hunk line numbers refer to the file as of this commit, so parse that version
+                        // (not the working tree, which may have moved or removed the code since).
+                        var sourceAtCommit = RunGitCommand(ctx.Path, "show", $"{commitHash}:{normalizedFile}");
+                        if (string.IsNullOrEmpty(sourceAtCommit))
+                        {
+                            _logger.Debug($"[M2R] Could not read {file} at {commitHash.Substring(0, 8)}");
+                            continue;
+                        }
+                        var methods = GetMethodsFromSource(sourceAtCommit).ToList();
                         _logger.Debug($"[M2R]   Found {methods.Count()} method(s)");
                         int matchCount = 0;
 
