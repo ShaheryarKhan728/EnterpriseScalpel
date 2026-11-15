@@ -40,7 +40,7 @@ namespace Scalpel.Enterprise
             {
                 // [TEMPORARILY DISABLED] API call to ClickUp - using URL template instead
                 /*
-                var url = $"{BaseUrl}/task/{ticketId}";
+                var url = $"{BaseUrl}/task/{Uri.EscapeDataString(ticketId)}";
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
@@ -55,7 +55,7 @@ namespace Scalpel.Enterprise
                 */
 
                 // Generate task URL using template: https://app.clickup.com/t/{WorkspaceId}/{TicketId}
-                var taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{ticketId}";
+                var taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{Uri.EscapeDataString(ticketId)}";
                 var ticket = new PMTicket
                 {
                     Id = ticketId,
@@ -119,7 +119,7 @@ namespace Scalpel.Enterprise
                 */
 
                 // Generate task URL using template: https://app.clickup.com/t/{WorkspaceId}/{RequirementId}
-                var taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{requirementId}";
+                var taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{Uri.EscapeDataString(requirementId)}";
                 var ticket = new PMTicket
                 {
                     Id = requirementId,

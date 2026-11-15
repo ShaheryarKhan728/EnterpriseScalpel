@@ -37,7 +37,7 @@ namespace Scalpel.Enterprise
 
             try
             {
-                var url = $"{_config.BaseUrl?.TrimEnd('/')}/rest/api/3/issue/{ticketId}";
+                var url = $"{_config.BaseUrl?.TrimEnd('/')}/rest/api/3/issue/{Uri.EscapeDataString(ticketId)}";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Add("Authorization", GetBasicAuthHeader());
                 request.Headers.Add("Accept", "application/json");
@@ -76,7 +76,9 @@ namespace Scalpel.Enterprise
             try
             {
                 // Search for requirement ID in text fields (summary, description, comments)
-                var jql = $"text ~ \"{requirementId}\"";
+                // Escape JQL string delimiters so the ID can only ever be a search term.
+                var jqlTerm = requirementId.Replace("\\", "\\\\").Replace("\"", "\\\"");
+                var jql = $"text ~ \"{jqlTerm}\"";
                 var url = $"{_config.BaseUrl?.TrimEnd('/')}/rest/api/3/search?jql={Uri.EscapeDataString(jql)}&maxResults=50";
 
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -116,7 +118,7 @@ namespace Scalpel.Enterprise
                 Priority = issue.Fields?.Priority?.Name ?? "Medium",
                 Assignee = issue.Fields?.Assignee?.DisplayName ?? "Unassigned",
                 DueDate = dueDate != null ? DateTime.Parse(dueDate) : null,
-                Url = $"{_config.BaseUrl?.TrimEnd('/')}/browse/{issue?.Key}",
+                Url = $"{_config.BaseUrl?.TrimEnd('/')}/browse/{Uri.EscapeDataString(issue?.Key ?? string.Empty)}",
                 Platform = "JIRA"
             };
         }

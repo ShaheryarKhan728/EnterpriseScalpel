@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -17,7 +18,10 @@ namespace Scalpel.Enterprise
         private readonly ILogger _logger;
         private readonly string _cacheFilePath;
         private readonly IPMPlatform _platform;
-        private Dictionary<string, PMCacheEntry> _cache = new();
+        // Written from parallel fetch tasks, so it must be thread-safe.
+        private ConcurrentDictionary<string, PMCacheEntry> _cache = new();
+        // The cache file is shared by every manager instance (one per API request).
+        private static readonly object CacheFileLock = new();
         private readonly SemaphoreSlim _concurrencyLimiter;
 
         public PMPlatformManager(PMConfig config, ILogger logger, string? outputDirectory = null)
@@ -137,22 +141,23 @@ namespace Scalpel.Enterprise
         private PMTicket GenerateTaskUrlTicket(string requirementId)
         {
             string taskUrl;
+            var id = Uri.EscapeDataString(requirementId);
 
             // Generate URL based on platform
             switch (_config.Platform?.ToLower())
             {
                 case "clickup":
-                    taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{requirementId}";
+                    taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{id}";
                     break;
                 case "jira":
-                    taskUrl = $"{_config.BaseUrl}/browse/{requirementId}";
+                    taskUrl = $"{_config.BaseUrl}/browse/{id}";
                     break;
                 case "azuredevops":
                 case "ado":
-                    taskUrl = $"{_config.BaseUrl}/{_config.Organization}/{_config.Project}/_workitems/edit/{requirementId}";
+                    taskUrl = $"{_config.BaseUrl}/{_config.Organization}/{_config.Project}/_workitems/edit/{id}";
                     break;
                 default:
-                    taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{requirementId}";
+                    taskUrl = $"https://app.clickup.com/t/{_config.WorkspaceId}/{id}";
                     break;
             }
 
@@ -203,26 +208,28 @@ namespace Scalpel.Enterprise
                 if (!File.Exists(_cacheFilePath))
                     return;
 
-                var json = File.ReadAllText(_cacheFilePath);
+                string json;
+                lock (CacheFileLock)
+                {
+                    json = File.ReadAllText(_cacheFilePath);
+                }
                 var cacheDict = JsonSerializer.Deserialize<Dictionary<string, CacheEntryDto>>(json);
 
                 if (cacheDict == null)
                     return;
 
-                _cache = cacheDict.ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => new PMCacheEntry
+                _cache = new ConcurrentDictionary<string, PMCacheEntry>(cacheDict.Select(kvp =>
+                    new KeyValuePair<string, PMCacheEntry>(kvp.Key, new PMCacheEntry
                     {
                         Ticket = kvp.Value.Ticket,
                         ExpiresAt = kvp.Value.ExpiresAt
-                    }
-                );
+                    })));
 
                 // Remove expired entries
                 var expiredKeys = _cache.Where(kvp => kvp.Value.IsExpired).Select(kvp => kvp.Key).ToList();
                 foreach (var key in expiredKeys)
                 {
-                    _cache.Remove(key);
+                    _cache.TryRemove(key, out _);
                 }
 
                 _logger.Info($"Loaded {_cache.Count} PM tickets from cache");
@@ -230,7 +237,7 @@ namespace Scalpel.Enterprise
             catch (Exception ex)
             {
                 _logger.Warning($"Could not load cache: {ex.Message}");
-                _cache = new Dictionary<string, PMCacheEntry>();
+                _cache = new ConcurrentDictionary<string, PMCacheEntry>();
             }
         }
 
@@ -258,7 +265,12 @@ namespace Scalpel.Enterprise
                 );
 
                 var json = JsonSerializer.Serialize(cacheDict, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(_cacheFilePath, json);
+                lock (CacheFileLock)
+                {
+                    var tempPath = _cacheFilePath + ".tmp";
+                    File.WriteAllText(tempPath, json);
+                    File.Move(tempPath, _cacheFilePath, overwrite: true);
+                }
             }
             catch (Exception ex)
             {
