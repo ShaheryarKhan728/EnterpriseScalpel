@@ -292,11 +292,22 @@ namespace Scalpel.Enterprise
             return (repositoryUrl, branchName);
         }
 
-        private string CloneRepository(string repositoryUrl, string branchName = null)
+        private string? CloneRepository(string repositoryUrl, string? branchName = null, bool allowSsh = true)
         {
+            if (!InputValidator.IsValidCloneUrl(repositoryUrl, allowSsh))
+            {
+                _logger.Error("Rejected repository URL: only https:// URLs" + (allowSsh ? " and git@host:path SSH URLs" : "") + " are allowed.");
+                return null;
+            }
+            if (branchName != null && !InputValidator.IsValidBranchName(branchName))
+            {
+                _logger.Error($"Rejected branch name: '{branchName}' contains characters that are not allowed.");
+                return null;
+            }
+
             try
             {
-                var tempDir = Path.Combine(Path.GetTempPath(), "scalpel-" + Guid.NewGuid().ToString().Substring(0, 8));
+                var tempDir = Path.Combine(Path.GetTempPath(), "scalpel-" + Guid.NewGuid().ToString("N").Substring(0, 12));
                 Directory.CreateDirectory(tempDir);
 
                 _logger.Info($"Cloning repository to: {tempDir}");
@@ -305,38 +316,29 @@ namespace Scalpel.Enterprise
                     _logger.Info($"Checking out branch: {branchName}");
                 }
 
-                // Build clone command with optional branch
-                var cloneArgs = branchName != null 
-                    ? $"clone --branch {branchName} {repositoryUrl} {tempDir}"
-                    : $"clone {repositoryUrl} {tempDir}";
-
-                using var process = new Process
+                // Each value is its own argv entry; "--" ends option parsing before the positional arguments.
+                var cloneArgs = new List<string> { "clone", "--no-recurse-submodules" };
+                if (branchName != null)
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "git",
-                        Arguments = cloneArgs,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
+                    cloneArgs.Add("--branch");
+                    cloneArgs.Add(branchName);
+                }
+                cloneArgs.Add("--");
+                cloneArgs.Add(repositoryUrl);
+                cloneArgs.Add(tempDir);
 
-                process.Start();
-                process.WaitForExit();
+                var result = GitRunner.Run(cloneArgs);
 
-                if (process.ExitCode == 0)
+                if (result.ExitCode == 0)
                 {
                     _logger.Success($"Repository cloned successfully");
                     return tempDir;
                 }
-                else
-                {
-                    var error = process.StandardError.ReadToEnd();
-                    _logger.Error($"Failed to clone repository: {error}");
-                    return null;
-                }
+
+                _logger.Error(result.TimedOut
+                    ? "Failed to clone repository: timed out"
+                    : $"Failed to clone repository: {result.Error}");
+                return null;
             }
             catch (Exception ex)
             {
@@ -894,7 +896,7 @@ namespace Scalpel.Enterprise
                     if (IsRepositoryUrl(repo))
                     {
                         var (repoUrl, branchName) = ParseRepositoryUrl(repo);
-                        var tempDir = CloneRepository(repoUrl, branchName);
+                        var tempDir = CloneRepository(repoUrl, branchName, allowSsh: false);
                         if (string.IsNullOrEmpty(tempDir))
                         {
                             _logger.Warning($"Failed to clone repository: {repo}");
@@ -1230,7 +1232,7 @@ namespace Scalpel.Enterprise
         private Dictionary<string, List<string>> BuildCommitToRequirementsMap()
         {
             _logger.Info("🔍 [C2R] Starting BuildCommitToRequirementsMap...");
-            var logLines = RunGitCommand("log --pretty=format:\"%H %s\" --all --no-merges");
+            var logLines = RunGitCommand(null, "log", "--pretty=format:%H %s", "--all", "--no-merges");
             if (string.IsNullOrWhiteSpace(logLines))
             {
                 _logger.Warning("⚠️ [C2R] No commits found in repository");
@@ -1267,7 +1269,14 @@ namespace Scalpel.Enterprise
 
         private List<string> GetCommitsForRequirement(string requirementId, string repositoryPath = null)
         {
-            var output = RunGitCommand($"log --grep={requirementId} --oneline --no-merges", repositoryPath);
+            if (!InputValidator.IsValidRequirementId(requirementId))
+            {
+                _logger.Warning($"Rejected requirement ID '{requirementId}': only letters, digits, '.', '_' and '-' are allowed.");
+                return new List<string>();
+            }
+
+            // --grep=<value> is a single argv entry, so the ID can never become a separate git option.
+            var output = RunGitCommand(repositoryPath, "log", $"--grep={requirementId}", "--fixed-strings", "--oneline", "--no-merges");
             return string.IsNullOrWhiteSpace(output)
                 ? new List<string>()
                 : output.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -1327,7 +1336,7 @@ namespace Scalpel.Enterprise
 
         private Dictionary<string, int> GetFileChangeFrequency()
         {
-            var output = RunGitCommand("log --name-only --pretty=format:");
+            var output = RunGitCommand(null, "log", "--name-only", "--pretty=format:");
             var files = output.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 
             return files
@@ -1516,7 +1525,7 @@ namespace Scalpel.Enterprise
 
         private string[] GetFilesChangedInCommit(string commitHash)
         {
-            var filesOutput = RunGitCommand($"diff-tree --no-commit-id --name-only --root -r {commitHash}");
+            var filesOutput = RunGitCommand(null, "diff-tree", "--no-commit-id", "--name-only", "--root", "-r", commitHash);
             return filesOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                               .Select(f => f.Trim())
                               .Where(f => !string.IsNullOrWhiteSpace(f))
@@ -1526,7 +1535,7 @@ namespace Scalpel.Enterprise
         private Dictionary<string, List<(int start, int end)>> GetChangedLineRangesByFile(string commitHash)
         {
             _logger.Debug($"[LR] Parsing line ranges for commit {commitHash.Substring(0, 8)}...");
-            var diffOutput = RunGitCommand($"show {commitHash}");
+            var diffOutput = RunGitCommand(null, "show", commitHash);
             var changedLineRangesByFile = new Dictionary<string, List<(int start, int end)>>();
             string currentFile = null;
             int lineRangesFound = 0;
@@ -1633,39 +1642,29 @@ namespace Scalpel.Enterprise
             return a.start <= b.end && b.start <= a.end;
         }
 
-        private string RunGitCommand(string arguments, string repositoryPath = null)
+        private string RunGitCommand(string? repositoryPath, params string[] arguments)
         {
             try
             {
-                _logger.Debug($"[GIT] Running: git {arguments.Substring(0, Math.Min(80, arguments.Length))}");
-                
-                using var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "git",
-                        Arguments = arguments,
-                        WorkingDirectory = repositoryPath ?? string.Empty,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
+                var display = string.Join(' ', arguments);
+                _logger.Debug($"[GIT] Running: git {display.Substring(0, Math.Min(80, display.Length))}");
 
-                process.Start();
-                var output = process.StandardOutput.ReadToEnd();
-                var error = process.StandardError.ReadToEnd();
-                process.WaitForExit();
+                var result = GitRunner.Run(arguments, repositoryPath);
 
-                if (!string.IsNullOrWhiteSpace(error) && process.ExitCode != 0)
+                if (result.TimedOut)
                 {
-                    _logger.Error($"[GIT] Error: {error}");
-                    return output; // Return whatever output we got even if there's an error
+                    _logger.Error("[GIT] Command timed out");
+                    return result.Output;
                 }
 
-                _logger.Debug($"[GIT] Output: {output.Length} bytes, exit code: {process.ExitCode}");
-                return output;
+                if (!string.IsNullOrWhiteSpace(result.Error) && result.ExitCode != 0)
+                {
+                    _logger.Error($"[GIT] Error: {result.Error}");
+                    return result.Output; // Return whatever output we got even if there's an error
+                }
+
+                _logger.Debug($"[GIT] Output: {result.Output.Length} bytes, exit code: {result.ExitCode}");
+                return result.Output;
             }
             catch (Exception ex)
             {
@@ -1861,7 +1860,7 @@ namespace Scalpel.Enterprise
             foreach (var commitHash in commitList)
             {
                 _logger.Debug($"[C2F] Getting files for commit {commitHash.Substring(0, 8)}...");
-                var output = RunGitCommand($"show --pretty=format:%H --name-only {commitHash}");
+                var output = RunGitCommand(null, "show", "--pretty=format:%H", "--name-only", commitHash);
 
                 if (string.IsNullOrWhiteSpace(output))
                 {
