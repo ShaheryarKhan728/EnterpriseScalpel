@@ -18,10 +18,10 @@ RUN dotnet restore "EnterpriseScalpel.csproj"
 RUN dotnet build "EnterpriseScalpel.csproj" --configuration Release --no-restore
 RUN dotnet publish "EnterpriseScalpel.csproj" --configuration Release --no-build --output /app/publish
 
-# Stage 2: Runtime
-FROM mcr.microsoft.com/dotnet/sdk:8.0
+# Stage 2: Runtime (ASP.NET runtime only - no SDK/compilers in the shipped image)
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 
-# Install git and wget (required for the application)
+# Install git and wget (required for the application and health check)
 RUN apt-get update && apt-get install -y --no-install-recommends git wget ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -29,18 +29,22 @@ WORKDIR /app
 # Copy published files from builder
 COPY --from=builder /app/publish .
 
-# Create scalpel-reports directory for output
-RUN mkdir -p /app/scalpel-reports
+# Create scalpel-reports directory for output, owned by the non-root user
+RUN mkdir -p /app/scalpel-reports && chown -R $APP_UID /app/scalpel-reports
 
-# Containers must listen on all interfaces; the app defaults to loopback otherwise
-ENV SCALPEL_HOST=0.0.0.0
+# Containers must listen on all interfaces; the app defaults to loopback otherwise.
+# PORT defaults to 5000 here; platforms such as Render override it.
+ENV SCALPEL_HOST=0.0.0.0 \
+    PORT=5000
 
-# Expose port (Render will override with $PORT)
 EXPOSE 5000
 
-# Health check
+# Health check follows $PORT so it keeps working when the platform changes the port
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 -O /dev/null http://localhost:5000/api/health || exit 1
+  CMD wget --quiet --tries=1 -O /dev/null "http://localhost:${PORT}/api/health" || exit 1
+
+# Run as the image's built-in non-root user
+USER $APP_UID
 
 # Run the application
 ENTRYPOINT ["dotnet", "/app/EnterpriseScalpel.dll"]

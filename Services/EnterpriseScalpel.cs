@@ -876,10 +876,18 @@ namespace Scalpel.Enterprise
             var cwd = Directory.GetCurrentDirectory();
             var wwwrootInCwd = Path.Combine(cwd, "wwwroot");
             
+            var wwwrootNextToExe = Path.Combine(AppContext.BaseDirectory, "wwwroot");
+
             if (Directory.Exists(wwwrootInCwd))
             {
                 contentRoot = cwd;
                 webRoot = wwwrootInCwd;
+            }
+            else if (Directory.Exists(wwwrootNextToExe))
+            {
+                // Published/release binaries ship wwwroot next to the executable
+                contentRoot = AppContext.BaseDirectory;
+                webRoot = wwwrootNextToExe;
             }
             else
             {
