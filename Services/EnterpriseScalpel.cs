@@ -1553,21 +1553,6 @@ namespace Scalpel.Enterprise
             return _reportService.GenerateHtmlReport(analysis);
         }
 
-        private string GenerateBadgeHtml(List<string> reqs)
-        {
-            if (reqs.Count <= 3)
-            {
-                return string.Join("", reqs.Select(r => $"<span class='badge'>{r}</span>"));
-            }
-
-            var badgesHtml = $"<span class='badge'>{reqs[0]}</span>" +
-                           $"<button class='expand-btn' onclick='expandBadges(this)'>+{reqs.Count - 1}</button>" +
-                           $"<div class='expanded-badges' style='display:none'>" +
-                           string.Join("", reqs.Skip(1).Select(r => $"<span class='badge'>{r}</span>")) +
-                           $"</div>";
-            return badgesHtml;
-        }
-
         private int GetRiskNumericValue(int requirementCount)
         {
             return requirementCount switch

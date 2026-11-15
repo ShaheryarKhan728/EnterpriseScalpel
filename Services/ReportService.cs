@@ -69,7 +69,7 @@ namespace Scalpel.Enterprise
                         ? commitHash.Substring(0, 8)
                         : commitHash;
                     var badgesHtml = GenerateBadgeHtml(reqs, ticketData);
-                    return $"<tr class='commit-row'><td class='commit-hash'><code>{commitShort}</code></td><td>{badgesHtml}</td></tr>";
+                    return $"<tr class='commit-row'><td class='commit-hash'><code>{EscapeHtml(commitShort)}</code></td><td>{badgesHtml}</td></tr>";
                 }));
             
             // Add hidden rows for remaining commits
@@ -85,7 +85,7 @@ namespace Scalpel.Enterprise
                         ? commitHash.Substring(0, 8)
                         : commitHash;
                     var badgesHtml = GenerateBadgeHtml(reqs, ticketData);
-                    return $"<tr class='commit-row hidden-row'><td class='commit-hash'><code>{commitShort}</code></td><td>{badgesHtml}</td></tr>";
+                    return $"<tr class='commit-row hidden-row'><td class='commit-hash'><code>{EscapeHtml(commitShort)}</code></td><td>{badgesHtml}</td></tr>";
                 }));
             
             var commitTableRows = commitRows + hiddenCommitRows;
@@ -98,7 +98,7 @@ namespace Scalpel.Enterprise
                     var reqs = kvp.Value.ToList();
                     var riskLevel = GetRiskLevel(reqs.Count);
                     var badgesHtml = GenerateBadgeHtml(reqs, ticketData);
-                    return $"<tr class='file-row' data-risk='{GetRiskNumericValue(reqs.Count)}'><td class='file-name'>{kvp.Key}</td><td>{badgesHtml}</td><td class='risk-cell'>{riskLevel}</td></tr>";
+                    return $"<tr class='file-row' data-risk='{GetRiskNumericValue(reqs.Count)}'><td class='file-name'>{EscapeHtml(kvp.Key)}</td><td>{badgesHtml}</td><td class='risk-cell'>{riskLevel}</td></tr>";
                 }));
 
             // Generate method rows (limited to first 30)
@@ -111,7 +111,7 @@ namespace Scalpel.Enterprise
                     var fileName = Path.GetFileName(method.FilePath);
                     var reqs = method.Requirements?.ToList() ?? new List<string>();
                     var badgesHtml = GenerateBadgeHtml(reqs, ticketData);
-                    return $"<tr class='method-row'><td class='method-name'>{methodName}</td><td class='file-ref'>{fileName}</td><td class='lines'>{method.LineStart} - {method.LineEnd}</td><td class='changes'>{method.ChangeCount}</td><td>{badgesHtml}</td></tr>";
+                    return $"<tr class='method-row'><td class='method-name'>{EscapeHtml(methodName)}</td><td class='file-ref'>{EscapeHtml(fileName)}</td><td class='lines'>{method.LineStart} - {method.LineEnd}</td><td class='changes'>{method.ChangeCount}</td><td>{badgesHtml}</td></tr>";
                 }));
 
             var repoPath = analysis.RepositoryPath ?? (analysis.RepositoryPaths?.FirstOrDefault() ?? "Not Provided");
@@ -841,7 +841,7 @@ namespace Scalpel.Enterprise
                 </div>
                 <div class='metadata-item'>
                     <strong>Repository Path</strong>
-                    <span>{repoPath}</span>
+                    <span>{EscapeHtml(repoPath)}</span>
                 </div>
                 <div class='metadata-item'>
                     <strong>Filtered Requirement</strong>
@@ -915,11 +915,12 @@ namespace Scalpel.Enterprise
             // Helper function to generate badge HTML (clickable if PM data available)
             Func<string, string> GenerateBadge = (req) =>
             {
-                if (ticketData.TryGetValue(req, out var ticket) && !string.IsNullOrEmpty(ticket.Url))
+                var safeUrl = ticketData.TryGetValue(req, out var ticket) ? SafeHttpUrl(ticket.Url) : null;
+                if (safeUrl != null)
                 {
-                    return $"<a href='{ticket.Url}' target='_blank' class='badge-link'><span class='badge'>{req}</span></a>";
+                    return $"<a href='{EscapeHtml(safeUrl)}' target='_blank' rel='noopener noreferrer' class='badge-link'><span class='badge'>{EscapeHtml(req)}</span></a>";
                 }
-                return $"<span class='badge'>{req}</span>";
+                return $"<span class='badge'>{EscapeHtml(req)}</span>";
             };
 
             if (reqs.Count <= 3)
@@ -964,19 +965,20 @@ namespace Scalpel.Enterprise
                            riskScore >= 30 ? "risk-medium" : "risk-low";
 
             var html = "<tr>";
-            html += $"<td><strong>{requirement}</strong></td>";
+            html += $"<td><strong>{EscapeHtml(requirement)}</strong></td>";
 
             // Ticket cell with clickable link
-            if (hasTicketData && ticket is not null && !string.IsNullOrEmpty(ticket.Url))
+            var safeTicketUrl = hasTicketData && ticket is not null ? SafeHttpUrl(ticket.Url) : null;
+            if (hasTicketData && ticket is not null && safeTicketUrl != null)
             {
                 var platformBadgeClass = ticket.Url.Contains("atlassian") ? "badge-jira" :
                                         ticket.Url.Contains("clickup") ? "badge-clickup" : "badge-ado";
 
                 html += "<td>";
-                html += $"<a href='{EscapeHtml(ticket.Url)}' target='_blank' class='ticket-link' title='Open {ticket.Platform} ticket'>";
+                html += $"<a href='{EscapeHtml(safeTicketUrl)}' target='_blank' rel='noopener noreferrer' class='ticket-link' title='Open {EscapeHtml(ticket.Platform)} ticket'>";
                 html += $"{EscapeHtml(ticket.Key ?? "N/A")}: {EscapeHtml(ticket.Title ?? "N/A")}";
                 html += "</a>";
-                html += $"<span class='platform-badge {platformBadgeClass}'>{ticket.Platform}</span>";
+                html += $"<span class='platform-badge {platformBadgeClass}'>{EscapeHtml(ticket.Platform)}</span>";
                 html += "</td>";
                 html += $"<td class='ticket-data'>{EscapeHtml(ticket.Status ?? "-")}</td>";
                 html += $"<td class='ticket-data'>{EscapeHtml(ticket.Priority ?? "-")}</td>";
@@ -997,7 +999,16 @@ namespace Scalpel.Enterprise
             return html;
         }
 
-        private string EscapeHtml(string? text)
+        /// <summary>Returns the URL only if it is an absolute http(s) URL (blocks javascript:, data:, ...).</summary>
+        private static string? SafeHttpUrl(string? url)
+        {
+            return Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                   (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+                ? uri.AbsoluteUri
+                : null;
+        }
+
+        internal static string EscapeHtml(string? text)
         {
             if (string.IsNullOrEmpty(text))
                 return text ?? "";
