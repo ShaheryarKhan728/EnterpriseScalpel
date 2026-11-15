@@ -1,6 +1,6 @@
 {
   "DefaultRequirementId": "REQ-100535",
-  "RequirementPattern": "(?i)(REQ-\\d+",
+  "RequirementPattern": "(?i)REQ-\\d+",
   "OutputDirectory": "scalpel-reports",
   "ExcludePatterns": [
     "**/bin/**",

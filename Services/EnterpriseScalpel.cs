@@ -21,6 +21,22 @@ namespace Scalpel.Enterprise
         private readonly ILogger _logger;
         private readonly ReportService _reportService;
 
+        /// <summary>
+        /// Everything an analysis needs, passed explicitly so concurrent analyses never share
+        /// process-wide state (current directory, configured pattern).
+        /// </summary>
+        private sealed record RepoContext(string Path, Regex Pattern);
+
+        private RepoContext CurrentDirectoryContext() => new(Directory.GetCurrentDirectory(), CreateConfiguredPattern());
+
+        /// <summary>Compiles the configured RequirementPattern (with a match timeout) or fails with a clear message.</summary>
+        private Regex CreateConfiguredPattern()
+        {
+            if (InputValidator.TryCreatePattern(_config.RequirementPattern, out var regex, out var error))
+                return regex!;
+            throw new InvalidOperationException($"RequirementPattern in scalpel.config.json is invalid. {error}");
+        }
+
         public EnterpriseScalpel(Configuration config, ILogger logger)
         {
             _config = config;
@@ -86,58 +102,6 @@ namespace Scalpel.Enterprise
             }
         }
 
-        public void RunFullAnalysis()
-        {
-            _logger.Info("Starting comprehensive analysis...");
-
-            var commitToReqs = BuildCommitToRequirementsMap();
-            var allCommitFiles = GetAllCommitFiles(commitToReqs.Keys);
-            var fileToReqs = BuildFileToRequirementsMap(commitToReqs, allCommitFiles);
-            var methodToReqs = BuildMethodToRequirementsMap(commitToReqs, allCommitFiles);
-
-            var analysis = new AnalysisResult
-            {
-                CommitToRequirements = commitToReqs,
-                FileToRequirements = fileToReqs,
-                MethodToRequirements = methodToReqs,
-                AnalysisDate = DateTime.Now,
-                RepositoryPath = Directory.GetCurrentDirectory()
-            };
-
-            DisplayAnalysis(analysis);
-            ExportResults(analysis);
-        }
-
-        private void AnalyzeRequirement(string requirementId)
-        {
-            requirementId ??= _config.DefaultRequirementId;
-
-            _logger.Info($"Analyzing requirement: {requirementId}");
-
-            var commits = GetCommitsForRequirement(requirementId);
-            if (commits.Count == 0)
-            {
-                _logger.Warning($"No commits found for {requirementId}");
-                return;
-            }
-
-            var files = GetAffectedFiles(commits);
-            var methods = GetAffectedMethods(commits);
-            var dependencies = AnalyzeDependencies(files);
-
-            var impact = new RequirementImpact
-            {
-                RequirementId = requirementId,
-                CommitCount = commits.Count,
-                AffectedFiles = files,
-                AffectedMethods = methods,
-                Dependencies = dependencies,
-                RiskScore = CalculateRiskScore(files, methods, dependencies)
-            };
-
-            DisplayRequirementImpact(impact);
-        }
-
         private void AnalyzeWithRepositories(List<string> repositories, string? requirementId)
         {
             _logger.Info($"Analyzing {(repositories.Count > 0 ? repositories.Count + " repositories" : "current repository")}...");
@@ -147,7 +111,7 @@ namespace Scalpel.Enterprise
                 repositories.Add(Directory.GetCurrentDirectory());
             }
 
-            var allAnalysisResults = AnalyzeRepositoryList(repositories, requirementId, fromApi: false);
+            var allAnalysisResults = AnalyzeRepositoryList(repositories, requirementId, CreateConfiguredPattern(), fromApi: false);
 
             if (allAnalysisResults.Count > 0)
             {
@@ -165,10 +129,9 @@ namespace Scalpel.Enterprise
         /// Analyzes each repository, cloning remote URLs into a temp directory that is always deleted afterwards.
         /// API callers (<paramref name="fromApi"/>) may only use https:// URLs unless SCALPEL_ALLOW_LOCAL_REPOS=true.
         /// </summary>
-        private List<AnalysisResult> AnalyzeRepositoryList(IEnumerable<string> repositories, string? requirementId, bool fromApi)
+        private List<AnalysisResult> AnalyzeRepositoryList(IEnumerable<string> repositories, string? requirementId, Regex pattern, bool fromApi)
         {
             var results = new List<AnalysisResult>();
-            var originalDirectory = Directory.GetCurrentDirectory();
 
             foreach (var repo in repositories)
             {
@@ -204,11 +167,10 @@ namespace Scalpel.Enterprise
                         continue;
                     }
 
-                    Directory.SetCurrentDirectory(workDir);
-
+                    var ctx = new RepoContext(workDir, pattern);
                     var analysis = string.IsNullOrEmpty(requirementId)
-                        ? PerformCompleteAnalysis()
-                        : AnalyzeRequirementInRepository(requirementId, workDir);
+                        ? PerformCompleteAnalysis(ctx)
+                        : AnalyzeRequirementInRepository(ctx, requirementId);
 
                     if (analysis != null)
                     {
@@ -219,7 +181,6 @@ namespace Scalpel.Enterprise
                 }
                 finally
                 {
-                    Directory.SetCurrentDirectory(originalDirectory);
                     if (tempDir != null)
                     {
                         DeleteDirectoryQuietly(tempDir);
@@ -403,67 +364,14 @@ namespace Scalpel.Enterprise
             }
         }
 
-        private (string cloneUrl, string branchName) ParseGitUrl(string webUrl)
-        {
-            var uri = new Uri(webUrl);
-            var path = uri.AbsolutePath;
-
-            string branchName = null;
-            string repoPath = path;
-
-            // Azure DevOps: https://dev.azure.com/org/project/_git/repo?version=GBbranch
-            if (uri.Host.Equals("dev.azure.com", StringComparison.OrdinalIgnoreCase) ||
-                uri.Host.EndsWith(".visualstudio.com", StringComparison.OrdinalIgnoreCase))
-            {
-                var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-                var version = query["version"]; // e.g. "GBdevelop"
-                if (!string.IsNullOrEmpty(version) && version.StartsWith("GB"))
-                    branchName = version.Substring(2); // strip "GB" prefix
-
-                // repoPath is already correct — Azure clone URL == web URL (without query)
-                var cloneUrl = $"{uri.Scheme}://{uri.Host}{path}";
-                return (cloneUrl, branchName);
-            }
-
-            // GitLab: /owner/repo/-/tree/branch
-            var gitlabTree = path.IndexOf("/-/tree/");
-            if (gitlabTree >= 0)
-            {
-                repoPath   = path.Substring(0, gitlabTree);
-                branchName = path.Substring(gitlabTree + 8).Split('?')[0].Trim('/');
-                return ($"{uri.Scheme}://{uri.Host}{repoPath}.git", branchName);
-            }
-
-            // GitHub: /owner/repo/tree/branch
-            var githubTree = path.IndexOf("/tree/");
-            if (githubTree >= 0)
-            {
-                repoPath   = path.Substring(0, githubTree);
-                branchName = path.Substring(githubTree + 6).Split('?')[0].Trim('/');
-                return ($"{uri.Scheme}://{uri.Host}{repoPath}.git", branchName);
-            }
-
-            // Bitbucket: /owner/repo/src/branch
-            var bitbucketSrc = path.IndexOf("/src/");
-            if (bitbucketSrc >= 0)
-            {
-                repoPath   = path.Substring(0, bitbucketSrc);
-                branchName = path.Substring(bitbucketSrc + 5).Split('?')[0].Trim('/');
-                return ($"{uri.Scheme}://{uri.Host}{repoPath}.git", branchName);
-            }
-
-            // No branch segment found — clone default branch
-            return ($"{uri.Scheme}://{uri.Host}{repoPath}.git", null);
-        }
-
-        private AnalysisResult PerformCompleteAnalysis()
+        private AnalysisResult PerformCompleteAnalysis(RepoContext ctx)
         {
             _logger.Info("Starting comprehensive repository analysis...");
 
-            var commitToReqs = BuildCommitToRequirementsMap();
-            var allCommitFiles = GetAllCommitFiles(commitToReqs.Keys);
-            var fileToReqs = BuildFileToRequirementsMap(commitToReqs, allCommitFiles);
-            var methodToReqs = BuildMethodToRequirementsMap(commitToReqs, allCommitFiles);
+            var commitToReqs = BuildCommitToRequirementsMap(ctx);
+            var allCommitFiles = GetAllCommitFiles(ctx, commitToReqs.Keys);
+            var fileToReqs = BuildFileToRequirementsMap(ctx, commitToReqs, allCommitFiles);
+            var methodToReqs = BuildMethodToRequirementsMap(ctx, commitToReqs, allCommitFiles);
 
             var analysis = new AnalysisResult
             {
@@ -471,24 +379,24 @@ namespace Scalpel.Enterprise
                 FileToRequirements = fileToReqs,
                 MethodToRequirements = methodToReqs,
                 AnalysisDate = DateTime.Now,
-                RepositoryPath = Directory.GetCurrentDirectory()
+                RepositoryPath = ctx.Path
             };
 
             return analysis;
         }
 
-        private AnalysisResult AnalyzeRequirementInRepository(string requirementId, string repositoryPath = null)
+        private AnalysisResult? AnalyzeRequirementInRepository(RepoContext ctx, string requirementId)
         {
             _logger.Info($"Analyzing requirement: {requirementId}");
 
-            var commits = GetCommitsForRequirement(requirementId, repositoryPath);
+            var commits = GetCommitsForRequirement(requirementId, ctx.Path);
             if (commits.Count == 0)
             {
                 _logger.Warning($"No commits found for {requirementId}");
                 return null;
             }
 
-            var commitToReqs = BuildCommitToRequirementsMap();
+            var commitToReqs = BuildCommitToRequirementsMap(ctx);
             _logger.Info($"[MERGE] Full commitToReqs: {commitToReqs.Count} commits");
             foreach (var kvp in commitToReqs.Take(5))
             {
@@ -496,11 +404,11 @@ namespace Scalpel.Enterprise
             }
             
             // Build COMPLETE mappings with ALL commits (to show all requirements per file/method)
-            var allCommitFiles = GetAllCommitFiles(commitToReqs.Keys);
+            var allCommitFiles = GetAllCommitFiles(ctx, commitToReqs.Keys);
             _logger.Info($"[MERGE] All commit files: {allCommitFiles.Count} commits with files");
-            var completeFileToReqs = BuildFileToRequirementsMap(commitToReqs, allCommitFiles);
+            var completeFileToReqs = BuildFileToRequirementsMap(ctx, commitToReqs, allCommitFiles);
             _logger.Info($"[MERGE] Complete files: {completeFileToReqs.Count} files");
-            var completeMethodToReqs = BuildMethodToRequirementsMap(commitToReqs, allCommitFiles);
+            var completeMethodToReqs = BuildMethodToRequirementsMap(ctx, commitToReqs, allCommitFiles);
             _logger.Info($"[MERGE] Complete methods: {completeMethodToReqs.Count} methods");
             
             // Filter commits to only those containing the specific requirement ID (for tracking changes)
@@ -515,11 +423,11 @@ namespace Scalpel.Enterprise
             }
             _logger.Info($"[MERGE] Filtered commitToReqs: {filteredCommitToReqs.Count} commits");
             
-            var filteredCommitFiles = GetAllCommitFiles(filteredCommitToReqs.Keys);
+            var filteredCommitFiles = GetAllCommitFiles(ctx, filteredCommitToReqs.Keys);
             _logger.Info($"[MERGE] Filtered commit files: {filteredCommitFiles.Count} commits with files");
-            var filteredFileToReqs = BuildFileToRequirementsMap(filteredCommitToReqs, filteredCommitFiles);
+            var filteredFileToReqs = BuildFileToRequirementsMap(ctx, filteredCommitToReqs, filteredCommitFiles);
             _logger.Info($"[MERGE] Filtered files: {filteredFileToReqs.Count} files");
-            var filteredMethodToReqs = BuildMethodToRequirementsMap(filteredCommitToReqs, filteredCommitFiles);
+            var filteredMethodToReqs = BuildMethodToRequirementsMap(ctx, filteredCommitToReqs, filteredCommitFiles);
             _logger.Info($"[MERGE] Filtered methods: {filteredMethodToReqs.Count} methods");
             
             // Merge: Use files/methods from filteredMapping, but Requirements from completeMapping
@@ -563,7 +471,7 @@ namespace Scalpel.Enterprise
                 FileToRequirements = mergedFileToReqs,
                 MethodToRequirements = mergedMethodToReqs,
                 AnalysisDate = DateTime.Now,
-                RepositoryPath = Directory.GetCurrentDirectory(),
+                RepositoryPath = ctx.Path,
                 FilteredByRequirementId = requirementId
             };
 
@@ -591,7 +499,7 @@ namespace Scalpel.Enterprise
                 repositories.Add(Directory.GetCurrentDirectory());
             }
 
-            var allAnalysisResults = AnalyzeRepositoryList(repositories, requirementId, fromApi: false);
+            var allAnalysisResults = AnalyzeRepositoryList(repositories, requirementId, CreateConfiguredPattern(), fromApi: false);
 
             if (allAnalysisResults.Count > 0)
             {
@@ -877,35 +785,34 @@ namespace Scalpel.Enterprise
         {
             _logger.Info($"API: Analyzing {repositories.Count} repositories...");
 
-            var originalPattern = _config.RequirementPattern;
+            Regex pattern;
             if (!string.IsNullOrWhiteSpace(requirementPattern))
             {
                 _logger.Info($"Using override requirement pattern: {requirementPattern}");
-                _config.RequirementPattern = requirementPattern;
+                if (!InputValidator.TryCreatePattern(requirementPattern, out var custom, out var error))
+                    throw new ArgumentException(error);
+                pattern = custom!;
             }
-
-            try
+            else
             {
-                var allAnalysisResults = AnalyzeRepositoryList(repositories, requirementId, fromApi: true);
-
-                if (allAnalysisResults.Count > 0)
-                {
-                    return MergeAnalysisResults(allAnalysisResults);
-                }
-
-                return new AnalysisResult
-                {
-                    CommitToRequirements = new Dictionary<string, List<string>>(),
-                    FileToRequirements = new Dictionary<string, HashSet<string>>(),
-                    MethodToRequirements = new Dictionary<string, MethodInfo>(),
-                    AnalysisDate = DateTime.Now,
-                    RepositoryPaths = repositories.Select(RedactRepository).ToList()
-                };
+                pattern = CreateConfiguredPattern();
             }
-            finally
+
+            var allAnalysisResults = AnalyzeRepositoryList(repositories, requirementId, pattern, fromApi: true);
+
+            if (allAnalysisResults.Count > 0)
             {
-                _config.RequirementPattern = originalPattern;
+                return MergeAnalysisResults(allAnalysisResults);
             }
+
+            return new AnalysisResult
+            {
+                CommitToRequirements = new Dictionary<string, List<string>>(),
+                FileToRequirements = new Dictionary<string, HashSet<string>>(),
+                MethodToRequirements = new Dictionary<string, MethodInfo>(),
+                AnalysisDate = DateTime.Now,
+                RepositoryPaths = repositories.Select(RedactRepository).ToList()
+            };
         }
 
         private const int MaxRepositoriesPerRequest = 10;
@@ -943,9 +850,15 @@ namespace Scalpel.Enterprise
             if (reqId != null && !InputValidator.IsValidRequirementId(reqId))
                 return $"Requirement ID '{reqId}' is not valid. Use letters, digits, '.', '_' or '-' (for example PSW-1234).";
 
-            if (!string.IsNullOrWhiteSpace(request.RequirementPattern) &&
-                !InputValidator.TryCreatePattern(request.RequirementPattern, out _, out var patternError))
-                return patternError;
+            if (!string.IsNullOrWhiteSpace(request.RequirementPattern))
+            {
+                if (!InputValidator.TryCreatePattern(request.RequirementPattern, out _, out var patternError))
+                    return patternError;
+            }
+            else if (!InputValidator.TryCreatePattern(_config.RequirementPattern, out _, out _))
+            {
+                return "No requirement pattern was given and the server's configured RequirementPattern is invalid. Please provide one.";
+            }
 
             if (!string.IsNullOrWhiteSpace(request.Format) && !SupportedFormats.Contains(request.Format))
                 return "Format must be json, html or csv.";
@@ -1226,9 +1139,10 @@ namespace Scalpel.Enterprise
         private void FindHotspots()
         {
             _logger.Info("Finding code hotspots...");
+            var ctx = CurrentDirectoryContext();
 
-            var fileChangeFrequency = GetFileChangeFrequency();
-            var complexity = AnalyzeComplexity();
+            var fileChangeFrequency = GetFileChangeFrequency(ctx);
+            var complexity = AnalyzeComplexity(ctx);
 
             var hotspots = fileChangeFrequency
                 .Join(complexity,
@@ -1257,13 +1171,14 @@ namespace Scalpel.Enterprise
         private void GenerateReport(string format)
         {
             _logger.Info($"Generating {format} report...");
+            var ctx = CurrentDirectoryContext();
 
             var analysis = new AnalysisResult
             {
-                CommitToRequirements = BuildCommitToRequirementsMap(),
-                FileToRequirements = BuildFileToRequirementsMap(null),
+                CommitToRequirements = BuildCommitToRequirementsMap(ctx),
+                FileToRequirements = BuildFileToRequirementsMap(ctx, null),
                 AnalysisDate = DateTime.Now,
-                RepositoryPath = Directory.GetCurrentDirectory()
+                RepositoryPath = ctx.Path
             };
 
             switch (format.ToLower())
@@ -1286,10 +1201,10 @@ namespace Scalpel.Enterprise
             }
         }
 
-        private Dictionary<string, List<string>> BuildCommitToRequirementsMap()
+        private Dictionary<string, List<string>> BuildCommitToRequirementsMap(RepoContext ctx)
         {
             _logger.Info("🔍 [C2R] Starting BuildCommitToRequirementsMap...");
-            var logLines = RunGitCommand(null, "log", "--pretty=format:%H %s", "--all", "--no-merges");
+            var logLines = RunGitCommand(ctx.Path, "log", "--pretty=format:%H %s", "--all", "--no-merges");
             if (string.IsNullOrWhiteSpace(logLines))
             {
                 _logger.Warning("⚠️ [C2R] No commits found in repository");
@@ -1302,7 +1217,7 @@ namespace Scalpel.Enterprise
 
             foreach (var line in lines)
             {
-                var matches = _config.RequirementRegex.Matches(line);
+                var matches = ctx.Pattern.Matches(line);
                 if (matches.Count == 0)
                 {
                     _logger.Debug($"[C2R] No requirements found in: {line.Substring(0, Math.Min(60, line.Length))}");
@@ -1339,45 +1254,10 @@ namespace Scalpel.Enterprise
                 : output.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).ToList();
         }
 
-        private HashSet<string> GetAffectedFiles(List<string> commits)
-        {
-            var files = new HashSet<string>();
-            foreach (var commit in commits)
-            {
-                var hash = commit.Split(' ')[0];
-                var changedFiles = GetFilesChangedInCommit(hash);
-                foreach (var file in changedFiles)
-                {
-                    files.Add(file);
-                }
-            }
-            return files;
-        }
-
-        private HashSet<string> GetAffectedMethods(List<string> commits)
-        {
-            var methods = new HashSet<string>();
-            return methods;
-        }
-
-        private List<string> AnalyzeDependencies(HashSet<string> files)
-        {
-            var dependencies = new List<string>();
-            return dependencies;
-        }
-
-        private double CalculateRiskScore(HashSet<string> files, HashSet<string> methods, List<string> dependencies)
-        {
-            double fileScore = files.Count * 0.3;
-            double methodScore = methods.Count * 0.2;
-            double dependencyScore = dependencies.Count * 0.5;
-
-            return Math.Min(fileScore + methodScore + dependencyScore, 100);
-        }
-
         private HashSet<string> GetRequirementsForFile(string filePath)
         {
-            var fileToReqs = BuildFileToRequirementsMap(null);
+            var ctx = CurrentDirectoryContext();
+            var fileToReqs = BuildFileToRequirementsMap(ctx, null);
             return fileToReqs.ContainsKey(filePath) ? fileToReqs[filePath] : new HashSet<string>();
         }
 
@@ -1391,9 +1271,9 @@ namespace Scalpel.Enterprise
             return new List<string>();
         }
 
-        private Dictionary<string, int> GetFileChangeFrequency()
+        private Dictionary<string, int> GetFileChangeFrequency(RepoContext ctx)
         {
-            var output = RunGitCommand(null, "log", "--name-only", "--pretty=format:");
+            var output = RunGitCommand(ctx.Path, "log", "--name-only", "--pretty=format:");
             var files = output.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 
             return files
@@ -1402,11 +1282,11 @@ namespace Scalpel.Enterprise
                 .ToDictionary(g => g.Key, g => g.Count());
         }
 
-        private Dictionary<string, int> AnalyzeComplexity()
+        private Dictionary<string, int> AnalyzeComplexity(RepoContext ctx)
         {
             var complexity = new Dictionary<string, int>();
 
-            var csFiles = Directory.GetFiles(Directory.GetCurrentDirectory(), "*.cs", SearchOption.AllDirectories);
+            var csFiles = Directory.GetFiles(ctx.Path, "*.cs", SearchOption.AllDirectories);
 
             foreach (var file in csFiles)
             {
@@ -1422,7 +1302,7 @@ namespace Scalpel.Enterprise
                     var loopCount = root.DescendantNodes().OfType<ForStatementSyntax>().Count() +
                                    root.DescendantNodes().OfType<WhileStatementSyntax>().Count();
 
-                    var relativePath = Path.GetRelativePath(Directory.GetCurrentDirectory(), file);
+                    var relativePath = Path.GetRelativePath(ctx.Path, file);
                     complexity[relativePath] = methodCount + classCount + ifCount + loopCount;
                 }
                 catch
@@ -1468,15 +1348,6 @@ namespace Scalpel.Enterprise
                     Console.WriteLine($"      Requirements: {string.Join(", ", file.Value)} ({file.Value.Count} reqs)");
                 }
             }
-        }
-
-        private void DisplayRequirementImpact(RequirementImpact impact)
-        {
-            Console.WriteLine($"\n📋 Requirement: {impact.RequirementId}");
-            Console.WriteLine($"   Commits: {impact.CommitCount}");
-            Console.WriteLine($"   Files: {impact.AffectedFiles.Count}");
-            Console.WriteLine($"   Methods: {impact.AffectedMethods.Count}");
-            Console.WriteLine($"   Risk Score: {impact.RiskScore:F2}/100");
         }
 
         private void ExportResults(AnalysisResult analysis)
@@ -1565,19 +1436,10 @@ namespace Scalpel.Enterprise
             };
         }
 
-        private string[] GetFilesChangedInCommit(string commitHash)
-        {
-            var filesOutput = RunGitCommand(null, "diff-tree", "--no-commit-id", "--name-only", "--root", "-r", commitHash);
-            return filesOutput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                              .Select(f => f.Trim())
-                              .Where(f => !string.IsNullOrWhiteSpace(f))
-                              .ToArray();
-        }
-
-        private Dictionary<string, List<(int start, int end)>> GetChangedLineRangesByFile(string commitHash)
+        private Dictionary<string, List<(int start, int end)>> GetChangedLineRangesByFile(RepoContext ctx, string commitHash)
         {
             _logger.Debug($"[LR] Parsing line ranges for commit {commitHash.Substring(0, 8)}...");
-            var diffOutput = RunGitCommand(null, "show", commitHash);
+            var diffOutput = RunGitCommand(ctx.Path, "show", commitHash);
             var changedLineRangesByFile = new Dictionary<string, List<(int start, int end)>>();
             string currentFile = null;
             int lineRangesFound = 0;
@@ -1647,17 +1509,6 @@ namespace Scalpel.Enterprise
             return changedLineRangesByFile;
         }
 
-        private List<(int start, int end)> GetChangedLineRanges(string commitHash)
-        {
-            var rangesByFile = GetChangedLineRangesByFile(commitHash);
-            var allRanges = new List<(int start, int end)>();
-            foreach (var ranges in rangesByFile.Values)
-            {
-                allRanges.AddRange(ranges);
-            }
-            return allRanges;
-        }
-
         private IEnumerable<MethodDeclarationSyntax> GetMethodsFromFile(string filePath)
         {
             try
@@ -1716,14 +1567,15 @@ namespace Scalpel.Enterprise
         }
 
         private Dictionary<string, HashSet<string>> BuildFileToRequirementsMap(
+            RepoContext ctx,
             Dictionary<string, List<string>> commitToRequirements,
             Dictionary<string, string[]> allCommitFiles = null)
         {
             _logger.Info("🔍 [F2R] Starting BuildFileToRequirementsMap...");
-            commitToRequirements ??= BuildCommitToRequirementsMap();
+            commitToRequirements ??= BuildCommitToRequirementsMap(ctx);
             _logger.Info($"[F2R] commitToRequirements: {commitToRequirements.Count} entries");
             
-            allCommitFiles ??= GetAllCommitFiles(commitToRequirements.Keys);
+            allCommitFiles ??= GetAllCommitFiles(ctx, commitToRequirements.Keys);
             _logger.Info($"[F2R] allCommitFiles: {allCommitFiles.Count} entries");
 
             var fileToRequirements = new Dictionary<string, HashSet<string>>();
@@ -1760,11 +1612,12 @@ namespace Scalpel.Enterprise
         }
 
         private Dictionary<string, MethodInfo> BuildMethodToRequirementsMap(
+            RepoContext ctx,
             Dictionary<string, List<string>> commitToRequirements,
             Dictionary<string, string[]> allCommitFiles = null)
         {
             _logger.Info("🔍 [M2R] Starting BuildMethodToRequirementsMap...");
-            allCommitFiles ??= GetAllCommitFiles(commitToRequirements.Keys);
+            allCommitFiles ??= GetAllCommitFiles(ctx, commitToRequirements.Keys);
             _logger.Info($"[M2R] Processing {commitToRequirements.Count} commits, {allCommitFiles.Count} have files");
             
             var methodToReqs = new Dictionary<string, MethodInfo>();
@@ -1784,13 +1637,13 @@ namespace Scalpel.Enterprise
                 var filesChanged = allCommitFiles[commitHash];
                 _logger.Debug($"[M2R] Commit {commitHash.Substring(0, 8)}... has {filesChanged.Length} file(s)");
                 
-                var changedLineRangesByFile = GetChangedLineRangesByFile(commitHash);
+                var changedLineRangesByFile = GetChangedLineRangesByFile(ctx, commitHash);
                 _logger.Debug($"[M2R] Got line ranges for {changedLineRangesByFile.Count} file(s)");
 
                 foreach (var file in filesChanged.Where(f => f.EndsWith(".cs")))
                 {
                     var normalizedFile = file.Replace("\\", "/");
-                    var absolutePath = Path.Combine(Directory.GetCurrentDirectory(), file);
+                    var absolutePath = Path.Combine(ctx.Path, file);
                     
                     if (!File.Exists(absolutePath))
                     {
@@ -1885,7 +1738,7 @@ namespace Scalpel.Enterprise
             return methodToReqs;
         }
 
-        private Dictionary<string, string[]> GetAllCommitFiles(IEnumerable<string> commitHashes)
+        private Dictionary<string, string[]> GetAllCommitFiles(RepoContext ctx, IEnumerable<string> commitHashes)
         {
             _logger.Info("🔍 [C2F] Starting GetAllCommitFiles...");
             var result = new Dictionary<string, string[]>();
@@ -1902,7 +1755,7 @@ namespace Scalpel.Enterprise
             foreach (var commitHash in commitList)
             {
                 _logger.Debug($"[C2F] Getting files for commit {commitHash.Substring(0, 8)}...");
-                var output = RunGitCommand(null, "show", "--pretty=format:%H", "--name-only", commitHash);
+                var output = RunGitCommand(ctx.Path, "show", "--pretty=format:%H", "--name-only", commitHash);
 
                 if (string.IsNullOrWhiteSpace(output))
                 {
