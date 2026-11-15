@@ -32,6 +32,9 @@ COPY --from=builder /app/publish .
 # Create scalpel-reports directory for output
 RUN mkdir -p /app/scalpel-reports
 
+# Containers must listen on all interfaces; the app defaults to loopback otherwise
+ENV SCALPEL_HOST=0.0.0.0
+
 # Expose port (Render will override with $PORT)
 EXPOSE 5000
 

@@ -988,11 +988,25 @@ namespace Scalpel.Enterprise
             var builder = WebApplication.CreateBuilder(options);
             var app = builder.Build();
 
+            // Bind address: loopback by default; containers set SCALPEL_HOST=0.0.0.0 explicitly.
+            var bindHost = Environment.GetEnvironmentVariable("SCALPEL_HOST");
+            if (string.IsNullOrWhiteSpace(bindHost)) bindHost = "127.0.0.1";
+            var loopbackOnly = bindHost is "127.0.0.1" or "localhost" or "::1" or "[::1]";
+
             app.UseDefaultFiles();
             app.UseStaticFiles();
 
             app.MapPost("/api/generate-report", async (HttpContext ctx) =>
             {
+                var rejection = WebRequestGuard.Check(ctx.Request, loopbackOnly);
+                if (rejection != null)
+                {
+                    _logger.Warning($"API request rejected: {rejection.Value.reason}");
+                    ctx.Response.StatusCode = rejection.Value.status;
+                    await ctx.Response.WriteAsync(rejection.Value.reason);
+                    return;
+                }
+
                 try
                 {
                     var request = await JsonSerializer.DeserializeAsync<GenerateRequest>(ctx.Request.Body);
@@ -1056,13 +1070,18 @@ namespace Scalpel.Enterprise
                 port = envPort;
             }
             
-            _logger.Info($"Starting web server on http://0.0.0.0:{port}");
+            var urlHost = bindHost.Contains(':') && !bindHost.StartsWith("[") ? $"[{bindHost}]" : bindHost;
+            _logger.Info($"Starting web server on http://{urlHost}:{port}");
+            if (!loopbackOnly)
+            {
+                _logger.Warning("The web server is reachable from other machines and has no authentication. Only expose it on a trusted network.");
+            }
             _logger.Info($"Content root: {contentRoot}");
             _logger.Info($"Static files from: {Path.Combine(contentRoot, "wwwroot")}");
-            
+
             try
             {
-                app.Run($"http://0.0.0.0:{port}");
+                app.Run($"http://{urlHost}:{port}");
             }
             catch (Exception ex)
             {
