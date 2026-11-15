@@ -138,7 +138,7 @@ namespace Scalpel.Enterprise
             DisplayRequirementImpact(impact);
         }
 
-        private void AnalyzeWithRepositories(List<string> repositories, string requirementId)
+        private void AnalyzeWithRepositories(List<string> repositories, string? requirementId)
         {
             _logger.Info($"Analyzing {(repositories.Count > 0 ? repositories.Count + " repositories" : "current repository")}...");
 
@@ -147,69 +147,124 @@ namespace Scalpel.Enterprise
                 repositories.Add(Directory.GetCurrentDirectory());
             }
 
-            var allAnalysisResults = new List<AnalysisResult>();
+            var allAnalysisResults = AnalyzeRepositoryList(repositories, requirementId, fromApi: false);
+
+            if (allAnalysisResults.Count > 0)
+            {
+                var mergedAnalysis = MergeAnalysisResults(allAnalysisResults);
+                DisplayAnalysis(mergedAnalysis);
+                ExportResults(mergedAnalysis);
+            }
+            else
+            {
+                _logger.Warning("No analysis results to display");
+            }
+        }
+
+        /// <summary>
+        /// Analyzes each repository, cloning remote URLs into a temp directory that is always deleted afterwards.
+        /// API callers (<paramref name="fromApi"/>) may only use https:// URLs unless SCALPEL_ALLOW_LOCAL_REPOS=true.
+        /// </summary>
+        private List<AnalysisResult> AnalyzeRepositoryList(IEnumerable<string> repositories, string? requirementId, bool fromApi)
+        {
+            var results = new List<AnalysisResult>();
             var originalDirectory = Directory.GetCurrentDirectory();
 
-
-            try
+            foreach (var repo in repositories)
             {
-                foreach (var repo in repositories)
+                string? tempDir = null;
+                try
                 {
-                    _logger.Info($"Processing repository: {repo}");
+                    _logger.Info($"Processing repository: {RedactRepository(repo)}");
+                    string workDir;
+                    string display;
 
                     if (IsRepositoryUrl(repo))
                     {
                         var (repoUrl, branchName) = ParseRepositoryUrl(repo);
-                        var tempDir = CloneRepository(repoUrl, branchName);
-
+                        tempDir = CloneRepository(repoUrl, branchName, allowSsh: !fromApi);
                         if (string.IsNullOrEmpty(tempDir))
                         {
-                            _logger.Warning($"Failed to clone repository: {repo}");
+                            _logger.Warning($"Failed to clone repository: {RedactRepository(repo)}");
                             continue;
                         }
-                        Directory.SetCurrentDirectory(tempDir);
+                        workDir = tempDir;
+                        display = RedactRepository(repoUrl);
                     }
-                    else if (Directory.Exists(repo))
+                    else if ((!fromApi || AllowLocalRepositories) && Directory.Exists(repo))
                     {
-                        Directory.SetCurrentDirectory(repo);
+                        workDir = Path.GetFullPath(repo);
+                        display = workDir;
                     }
                     else
                     {
-                        _logger.Warning($"Repository not found: {repo}");
+                        _logger.Warning(fromApi && !AllowLocalRepositories
+                            ? $"Rejected repository '{repo}': only https:// repository URLs are accepted."
+                            : $"Repository not found: {repo}");
                         continue;
                     }
 
-                    if (string.IsNullOrEmpty(requirementId))
-                    {
-                        _logger.Info("Performing complete analysis (no requirement ID specified)...");
-                        var analysis = PerformCompleteAnalysis();
-                        allAnalysisResults.Add(analysis);
-                    }
-                    else
-                    {
-                        var _currentDirectory = Directory.GetCurrentDirectory();
-                        var analysis = AnalyzeRequirementInRepository(requirementId, _currentDirectory);
-                        if (analysis != null)
-                        {
-                            allAnalysisResults.Add(analysis);
-                        }
-                    }
-                }
+                    Directory.SetCurrentDirectory(workDir);
 
-                if (allAnalysisResults.Count > 0)
-                {
-                    var mergedAnalysis = MergeAnalysisResults(allAnalysisResults);
-                    DisplayAnalysis(mergedAnalysis);
-                    ExportResults(mergedAnalysis);
+                    var analysis = string.IsNullOrEmpty(requirementId)
+                        ? PerformCompleteAnalysis()
+                        : AnalyzeRequirementInRepository(requirementId, workDir);
+
+                    if (analysis != null)
+                    {
+                        // Never expose server-side temp paths; report the repository the user asked for.
+                        analysis.RepositoryPath = display;
+                        results.Add(analysis);
+                    }
                 }
-                else
+                finally
                 {
-                    _logger.Warning("No analysis results to display");
+                    Directory.SetCurrentDirectory(originalDirectory);
+                    if (tempDir != null)
+                    {
+                        DeleteDirectoryQuietly(tempDir);
+                    }
                 }
             }
-            finally
+
+            return results;
+        }
+
+        internal static bool AllowLocalRepositories =>
+            string.Equals(Environment.GetEnvironmentVariable("SCALPEL_ALLOW_LOCAL_REPOS"), "true", StringComparison.OrdinalIgnoreCase);
+
+        private static TimeSpan CloneTimeout =>
+            int.TryParse(Environment.GetEnvironmentVariable("SCALPEL_CLONE_TIMEOUT_SECONDS"), out var seconds) && seconds > 0
+                ? TimeSpan.FromSeconds(seconds)
+                : TimeSpan.FromMinutes(5);
+
+        /// <summary>Removes credentials, query strings and fragments from repository URLs before logging or reporting them.</summary>
+        internal static string RedactRepository(string repository)
+        {
+            if (Uri.TryCreate(repository, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp))
             {
-                Directory.SetCurrentDirectory(originalDirectory);
+                var builder = new UriBuilder(uri) { UserName = string.Empty, Password = string.Empty, Query = string.Empty, Fragment = string.Empty };
+                return builder.Uri.GetLeftPart(UriPartial.Path);
+            }
+            return repository;
+        }
+
+        private void DeleteDirectoryQuietly(string path)
+        {
+            try
+            {
+                if (!Directory.Exists(path)) return;
+                // git marks pack files read-only, which makes Directory.Delete fail on Windows.
+                foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                }
+                Directory.Delete(path, recursive: true);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warning($"Could not delete temporary clone {path}: {ex.Message}");
             }
         }
 
@@ -327,7 +382,7 @@ namespace Scalpel.Enterprise
                 cloneArgs.Add(repositoryUrl);
                 cloneArgs.Add(tempDir);
 
-                var result = GitRunner.Run(cloneArgs);
+                var result = GitRunner.Run(cloneArgs, timeout: CloneTimeout);
 
                 if (result.ExitCode == 0)
                 {
@@ -335,6 +390,7 @@ namespace Scalpel.Enterprise
                     return tempDir;
                 }
 
+                DeleteDirectoryQuietly(tempDir);
                 _logger.Error(result.TimedOut
                     ? "Failed to clone repository: timed out"
                     : $"Failed to clone repository: {result.Error}");
@@ -526,7 +582,7 @@ namespace Scalpel.Enterprise
             }
         }
 
-        private async Task AnalyzeWithRepositoriesAndPMAsync(List<string> repositories, string requirementId)
+        private async Task AnalyzeWithRepositoriesAndPMAsync(List<string> repositories, string? requirementId)
         {
             _logger.Info($"Analyzing {(repositories.Count > 0 ? repositories.Count + " repositories" : "current repository")} with PM integration...");
 
@@ -535,66 +591,17 @@ namespace Scalpel.Enterprise
                 repositories.Add(Directory.GetCurrentDirectory());
             }
 
-            var allAnalysisResults = new List<AnalysisResult>();
-            var originalDirectory = Directory.GetCurrentDirectory();
+            var allAnalysisResults = AnalyzeRepositoryList(repositories, requirementId, fromApi: false);
 
-            try
+            if (allAnalysisResults.Count > 0)
             {
-                foreach (var repo in repositories)
-                {
-                    _logger.Info($"Processing repository: {repo}");
-
-                    if (IsRepositoryUrl(repo))
-                    {
-                        var (repoUrl, branchName) = ParseRepositoryUrl(repo);
-                        var tempDir = CloneRepository(repoUrl, branchName);
-                        if (string.IsNullOrEmpty(tempDir))
-                        {
-                            _logger.Warning($"Failed to clone repository: {repo}");
-                            continue;
-                        }
-                        Directory.SetCurrentDirectory(tempDir);
-                    }
-                    else if (Directory.Exists(repo))
-                    {
-                        Directory.SetCurrentDirectory(repo);
-                    }
-                    else
-                    {
-                        _logger.Warning($"Repository not found: {repo}");
-                        continue;
-                    }
-
-                    if (string.IsNullOrEmpty(requirementId))
-                    {
-                        _logger.Info("Performing complete analysis with PM enrichment...");
-                        var analysis = PerformCompleteAnalysis();
-                        allAnalysisResults.Add(analysis);
-                    }
-                    else
-                    {
-                        var analysis = AnalyzeRequirementInRepository(requirementId);
-                        if (analysis != null)
-                        {
-                            allAnalysisResults.Add(analysis);
-                        }
-                    }
-                }
-
-                if (allAnalysisResults.Count > 0)
-                {
-                    var mergedAnalysis = MergeAnalysisResults(allAnalysisResults);
-                    DisplayAnalysis(mergedAnalysis);
-                    await ExportResultsWithPMAsync(mergedAnalysis);
-                }
-                else
-                {
-                    _logger.Warning("No analysis results to display");
-                }
+                var mergedAnalysis = MergeAnalysisResults(allAnalysisResults);
+                DisplayAnalysis(mergedAnalysis);
+                await ExportResultsWithPMAsync(mergedAnalysis);
             }
-            finally
+            else
             {
-                Directory.SetCurrentDirectory(originalDirectory);
+                _logger.Warning("No analysis results to display");
             }
         }
 
@@ -866,65 +873,20 @@ namespace Scalpel.Enterprise
             _logger.Success($"HTML report: {path}");
         }
 
-        public AnalysisResult AnalyzeRepositoriesForApi(List<string> repositories, string requirementId, string requirementPattern = null)
+        public AnalysisResult AnalyzeRepositoriesForApi(List<string> repositories, string? requirementId, string? requirementPattern = null)
         {
-            _logger.Info($"API: Analyzing {(repositories?.Count > 0 ? repositories.Count + " repositories" : "current repository")}...");
+            _logger.Info($"API: Analyzing {repositories.Count} repositories...");
 
-            if (repositories == null || repositories.Count == 0)
-            {
-                repositories = new List<string> { Directory.GetCurrentDirectory() };
-            }
-
-            var allAnalysisResults = new List<AnalysisResult>();
-            var originalDirectory = Directory.GetCurrentDirectory();
             var originalPattern = _config.RequirementPattern;
-
             if (!string.IsNullOrWhiteSpace(requirementPattern))
             {
                 _logger.Info($"Using override requirement pattern: {requirementPattern}");
-                Console.WriteLine($"⚙️  Using override requirement pattern: {requirementPattern}");
                 _config.RequirementPattern = requirementPattern;
             }
-            Console.WriteLine($"🔍 Analyzing repositories: {string.Join(", ", repositories)} for requirement ID: {requirementId ?? "N/A"} with pattern: {_config.RequirementPattern}");
-            _logger.Info($"Request requirement pattern: {requirementPattern}");
 
             try
             {
-                foreach (var repo in repositories)
-                {
-                    _logger.Info($"Processing repository: {repo}");
-                    if (IsRepositoryUrl(repo))
-                    {
-                        var (repoUrl, branchName) = ParseRepositoryUrl(repo);
-                        var tempDir = CloneRepository(repoUrl, branchName, allowSsh: false);
-                        if (string.IsNullOrEmpty(tempDir))
-                        {
-                            _logger.Warning($"Failed to clone repository: {repo}");
-                            continue;
-                        }
-                        Directory.SetCurrentDirectory(tempDir);
-                    }
-                    else if (Directory.Exists(repo))
-                    {
-                        Directory.SetCurrentDirectory(repo);
-                    }
-                    else
-                    {
-                        _logger.Warning($"Repository not found: {repo}");
-                        continue;
-                    }
-
-                    if (string.IsNullOrEmpty(requirementId))
-                    {
-                        var analysis = PerformCompleteAnalysis();
-                        allAnalysisResults.Add(analysis);
-                    }
-                    else
-                    {
-                        var analysis = AnalyzeRequirementInRepository(requirementId);
-                        if (analysis != null) allAnalysisResults.Add(analysis);
-                    }
-                }
+                var allAnalysisResults = AnalyzeRepositoryList(repositories, requirementId, fromApi: true);
 
                 if (allAnalysisResults.Count > 0)
                 {
@@ -937,19 +899,58 @@ namespace Scalpel.Enterprise
                     FileToRequirements = new Dictionary<string, HashSet<string>>(),
                     MethodToRequirements = new Dictionary<string, MethodInfo>(),
                     AnalysisDate = DateTime.Now,
-                    RepositoryPath = Directory.GetCurrentDirectory(),
-                    RepositoryPaths = repositories
+                    RepositoryPaths = repositories.Select(RedactRepository).ToList()
                 };
             }
             finally
             {
-                // restore working directory and pattern
-                Directory.SetCurrentDirectory(originalDirectory);
-                if (!string.IsNullOrWhiteSpace(requirementPattern))
+                _config.RequirementPattern = originalPattern;
+            }
+        }
+
+        private const int MaxRepositoriesPerRequest = 10;
+        private static readonly HashSet<string> SupportedFormats = new(StringComparer.OrdinalIgnoreCase) { "json", "html", "csv" };
+        private readonly SemaphoreSlim _apiConcurrency = new(
+            int.TryParse(Environment.GetEnvironmentVariable("SCALPEL_MAX_CONCURRENT_REPORTS"), out var n) && n > 0 ? n : 2);
+
+        /// <summary>Returns a client-facing error message, or null when the request is acceptable.</summary>
+        private string? ValidateApiRequest(GenerateRequest request)
+        {
+            var repos = request.Repositories?.Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r.Trim()).ToList() ?? new List<string>();
+            if (repos.Count == 0)
+                return "At least one repository URL is required.";
+            if (repos.Count > MaxRepositoriesPerRequest)
+                return $"At most {MaxRepositoriesPerRequest} repositories can be analyzed per request.";
+            request.Repositories = repos;
+
+            foreach (var repo in repos)
+            {
+                if (IsRepositoryUrl(repo))
                 {
-                    _config.RequirementPattern = originalPattern;
+                    var (url, branch) = ParseRepositoryUrl(repo);
+                    if (!InputValidator.IsValidCloneUrl(url, allowSsh: false))
+                        return $"Repository '{repo}' is not allowed: only https:// URLs are accepted.";
+                    if (branch != null && !InputValidator.IsValidBranchName(branch))
+                        return $"Branch name in '{repo}' contains characters that are not allowed.";
+                }
+                else if (!AllowLocalRepositories)
+                {
+                    return $"Repository '{repo}' is not allowed: only https:// URLs are accepted.";
                 }
             }
+
+            var reqId = request.RequirementIds?.FirstOrDefault(r => !string.IsNullOrWhiteSpace(r))?.Trim();
+            if (reqId != null && !InputValidator.IsValidRequirementId(reqId))
+                return $"Requirement ID '{reqId}' is not valid. Use letters, digits, '.', '_' or '-' (for example PSW-1234).";
+
+            if (!string.IsNullOrWhiteSpace(request.RequirementPattern) &&
+                !InputValidator.TryCreatePattern(request.RequirementPattern, out _, out var patternError))
+                return patternError;
+
+            if (!string.IsNullOrWhiteSpace(request.Format) && !SupportedFormats.Contains(request.Format))
+                return "Format must be json, html or csv.";
+
+            return null;
         }
 
         public void StartWebHost()
@@ -1007,16 +1008,43 @@ namespace Scalpel.Enterprise
                     return;
                 }
 
+                GenerateRequest? request;
                 try
                 {
-                    var request = await JsonSerializer.DeserializeAsync<GenerateRequest>(ctx.Request.Body);
-                    request ??= new GenerateRequest();
+                    request = await JsonSerializer.DeserializeAsync<GenerateRequest>(ctx.Request.Body);
+                }
+                catch (JsonException)
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await ctx.Response.WriteAsync("Request body is not valid JSON");
+                    return;
+                }
+                request ??= new GenerateRequest();
 
-                    var repos = request.Repositories ?? new List<string>();
-                    var reqId = request.RequirementIds?.FirstOrDefault();
+                var validationError = ValidateApiRequest(request);
+                if (validationError != null)
+                {
+                    _logger.Warning($"API request rejected: {validationError}");
+                    ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await ctx.Response.WriteAsync(validationError);
+                    return;
+                }
 
-                    var analysis = AnalyzeRepositoriesForApi(repos, reqId, request.RequirementPattern);
-                    var format = (request.Format ?? "json").ToLower();
+                // Clones are expensive: cap concurrent analyses instead of queueing unbounded work.
+                if (!await _apiConcurrency.WaitAsync(TimeSpan.Zero))
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                    await ctx.Response.WriteAsync("The server is busy with other reports. Please try again shortly.");
+                    return;
+                }
+
+                try
+                {
+                    var repos = request.Repositories!.Select(r => r.Trim()).ToList();
+                    var reqId = request.RequirementIds?.FirstOrDefault(r => !string.IsNullOrWhiteSpace(r))?.Trim();
+
+                    var analysis = await Task.Run(() => AnalyzeRepositoriesForApi(repos, reqId, request.RequirementPattern));
+                    var format = (request.Format ?? "json").ToLowerInvariant();
 
                     // Fetch PM data if platform specified
                     Dictionary<string, PMTicket> ticketData = new Dictionary<string, PMTicket>();
@@ -1052,11 +1080,21 @@ namespace Scalpel.Enterprise
                     ctx.Response.StatusCode = 400;
                     await ctx.Response.WriteAsync("Unknown format");
                 }
+                catch (RegexMatchTimeoutException)
+                {
+                    _logger.Warning("API request aborted: requirement pattern took too long to evaluate");
+                    ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await ctx.Response.WriteAsync("The requirement pattern is too slow to evaluate. Please simplify it.");
+                }
                 catch (Exception ex)
                 {
                     _logger.Error($"API error: {ex.Message}");
                     ctx.Response.StatusCode = 500;
                     await ctx.Response.WriteAsync("Server error");
+                }
+                finally
+                {
+                    _apiConcurrency.Release();
                 }
             });
 

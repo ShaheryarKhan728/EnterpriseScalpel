@@ -7,7 +7,8 @@ namespace Scalpel.Enterprise
     {
         public string DefaultRequirementId { get; set; } = "REQ-111";
         public string RequirementPattern { get; set; } = @"(?i)Req-\d+";
-        public Regex RequirementRegex => new Regex(RequirementPattern);
+        // Match timeout guards against catastrophic-backtracking patterns (ReDoS).
+        public Regex RequirementRegex => new Regex(RequirementPattern, RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
         public string OutputDirectory { get; set; } = "scalpel-reports";
         public string[] ExcludePatterns { get; set; } = { "**/bin/**", "**/obj/**", "**/packages/**" };
         public int RiskThresholdLow { get; set; } = 1;
