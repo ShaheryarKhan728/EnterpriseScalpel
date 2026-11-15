@@ -183,6 +183,26 @@ Request Body:
 Response: Generated report in requested format
 ```
 
+Requirement IDs may contain letters, digits, `.`, `_` and `-` (for example `REQ-1234` or `PSW-1234`).
+Set `requirementPattern` (or `RequirementPattern` in `scalpel.config.json`) to match your IDs, e.g. `(?i)\bPSW-\d+\b`.
+
+### Security and server settings
+
+The API runs git on the server, so it is locked down by default:
+
+- The server listens on `127.0.0.1` only. Set `SCALPEL_HOST=0.0.0.0` to accept remote connections (the Docker image does this). The API has no authentication, so only expose it on a trusted network.
+- Requests must use `Content-Type: application/json` and come from the same origin, which blocks cross-site requests from other web pages.
+- Only `https://` repository URLs are accepted by the API. Analysing local server paths needs `SCALPEL_ALLOW_LOCAL_REPOS=true`.
+- Cloned repositories are deleted after each request.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `PORT` | `5001` (`5000` in Docker) | HTTP port |
+| `SCALPEL_HOST` | `127.0.0.1` | Bind address |
+| `SCALPEL_ALLOW_LOCAL_REPOS` | `false` | Allow local paths in API requests |
+| `SCALPEL_CLONE_TIMEOUT_SECONDS` | `300` | Maximum time for one `git clone` |
+| `SCALPEL_MAX_CONCURRENT_REPORTS` | `2` | Concurrent reports before the API returns 429 |
+
 ## How It Works
 
 1. Scan git commits for requirement IDs
