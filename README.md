@@ -1,8 +1,8 @@
-# Enterprise Scalpel
+# Trace Matrix
 
 **Trace requirements through your codebase and actually understand what changed.**
 
-Enterprise Scalpel is a CLI + web tool I built to solve a very real problem:
+Trace Matrix (repository and binaries: `EnterpriseScalpel`) is a CLI + web tool I built to solve a very real problem:
 Figuring out what a requirement actually touched across a large codebase — especially when changes are spread across multiple commits, files, and branches.
 Instead of guessing, this tool goes through your git history, picks out requirement IDs from commits, and maps them to the exact files and methods that were affected.
 
@@ -119,7 +119,7 @@ dotnet run hotspots
 
 ### Repository URL Formats
 
-Enterprise Scalpel supports various repository URL formats with automatic branch detection:
+Trace Matrix supports various repository URL formats with automatic branch detection:
 
 #### GitHub Formats
 ```bash
@@ -156,7 +156,7 @@ git@github.com:org/repo.git
 
 ## Web Interface
 
-Enterprise Scalpel includes a web-based interface for analysis via REST API.
+Trace Matrix includes a web-based interface for analysis via REST API.
 
 ### Start Web Server
 ```bash
@@ -182,6 +182,29 @@ Request Body:
 
 Response: Generated report in requested format
 ```
+
+#### What will my change affect?
+Lists every requirement whose commits touched the files or methods you are about to change, i.e. what to retest.
+```
+POST /api/impact
+Content-Type: application/json
+
+{
+  "repositories": ["https://github.com/org/repo.git"],
+  "targets": ["PaymentService.cs", "Services/OrderService.cs::Refund", "::Checkout"],
+  "requirementPattern": "(?i)REQ-\\d+",   // optional
+  "pmPlatform": "clickup"                 // optional: adds task links
+}
+
+Response:
+{
+  "requirements": [{ "id": "REQ-12", "url": "https://..." }],
+  "targets": [{ "target": "PaymentService.cs",
+                "matches": [{ "file": "repo/src/PaymentService.cs", "method": null, "requirements": ["REQ-12"] }] }],
+  "unmatched": []
+}
+```
+A target can be a file name, a path ending (matched on folder boundaries), `File.cs::Method`, or `::Method` for that method in any file (method matching is C# only). Up to 20 targets per request.
 
 Requirement IDs may contain letters, digits, `.`, `_` and `-` (for example `REQ-1234` or `PSW-1234`).
 Set `requirementPattern` (or `RequirementPattern` in `scalpel.config.json`) to match your IDs, e.g. `(?i)\bPSW-\d+\b`.

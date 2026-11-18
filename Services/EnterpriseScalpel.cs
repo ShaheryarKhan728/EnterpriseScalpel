@@ -1129,6 +1129,78 @@ namespace Scalpel.Enterprise
                 }
             });
 
+            // "What will my change affect?": requirements to retest for the files/methods being changed.
+            app.MapPost("/api/impact", async (HttpContext ctx) =>
+            {
+                var rejection = WebRequestGuard.Check(ctx.Request, loopbackOnly);
+                if (rejection != null)
+                {
+                    ctx.Response.StatusCode = rejection.Value.status;
+                    await ctx.Response.WriteAsync(rejection.Value.reason);
+                    return;
+                }
+
+                ImpactRequest? request;
+                try
+                {
+                    request = await JsonSerializer.DeserializeAsync<ImpactRequest>(ctx.Request.Body);
+                }
+                catch (JsonException)
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await ctx.Response.WriteAsync("Request body is not valid JSON");
+                    return;
+                }
+                request ??= new ImpactRequest();
+
+                var validationError = ValidateApiRequest(request) ?? ImpactService.ValidateTargets(request.Targets);
+                if (validationError != null)
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await ctx.Response.WriteAsync(validationError);
+                    return;
+                }
+
+                if (!await _apiConcurrency.WaitAsync(TimeSpan.Zero))
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                    await ctx.Response.WriteAsync("The server is busy with other reports. Please try again shortly.");
+                    return;
+                }
+
+                try
+                {
+                    var repos = request.Repositories!.Select(r => r.Trim()).ToList();
+                    // A full (unfiltered) analysis: every requirement that ever touched each file/method.
+                    var analysis = await Task.Run(() => AnalyzeRepositoriesForApi(repos, null, request.RequirementPattern));
+
+                    Dictionary<string, PMTicket>? tickets = null;
+                    if (!string.IsNullOrWhiteSpace(request.PmPlatform))
+                    {
+                        tickets = await FetchPMDataForPlatformAsync(analysis, request.PmPlatform);
+                    }
+
+                    var impact = ImpactService.FindImpact(analysis, request.Targets!, tickets);
+                    ctx.Response.ContentType = "application/json";
+                    await ctx.Response.WriteAsync(JsonSerializer.Serialize(impact, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+                }
+                catch (RegexMatchTimeoutException)
+                {
+                    ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await ctx.Response.WriteAsync("The requirement pattern is too slow to evaluate. Please simplify it.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"Impact API error: {ex.Message}");
+                    ctx.Response.StatusCode = 500;
+                    await ctx.Response.WriteAsync("Server error");
+                }
+                finally
+                {
+                    _apiConcurrency.Release();
+                }
+            });
+
             app.MapGet("/api/health", () => Results.Json(new { status = "ok" }));
 
             // Determine port: Priority: PORT env var > ASPNETCORE_URLS > default 5001
@@ -1155,8 +1227,10 @@ namespace Scalpel.Enterprise
                     try
                     {
                         if (EnsureSampleClone() == null) return;
-                        // Warm the cache with the demo button's request.
+                        // Warm the cache with the demo button's request, and with the full analysis
+                        // used by the "What will my change affect?" sample.
                         AnalyzeRepositoryList(new[] { _config.SampleRepository! }, _config.SampleRequirementId, CreateConfiguredPattern(), fromApi: true);
+                        AnalyzeRepositoryList(new[] { _config.SampleRepository! }, null, CreateConfiguredPattern(), fromApi: true);
                         _logger.Success("Sample report pre-generated");
                     }
                     catch (Exception ex)
@@ -1956,7 +2030,7 @@ namespace Scalpel.Enterprise
         {
             Console.WriteLine(@"
 ╔═══════════════════════════════════════════════════════════════╗
-║                    ENTERPRISE SCALPEL                         ║
+║                       TRACE MATRIX                            ║
 ║            Requirement Traceability & Impact Analysis         ║
 ╚═══════════════════════════════════════════════════════════════╝
 

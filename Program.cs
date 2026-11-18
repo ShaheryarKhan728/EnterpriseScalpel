@@ -24,7 +24,7 @@ internal class Program
         else
         {
             // Default behavior: Start web server and open browser
-            logger.Info("Starting Enterprise Scalpel Web Server...");
+            logger.Info("Starting Trace Matrix Web Server...");
             logger.Info("Opening browser in 2 seconds...");
             
             // Start web host in a separate thread so it doesn't block

@@ -337,6 +337,181 @@
       color: #67e8f9;
     }
 
+    /* Hero: text left, report preview right; stacks on narrow screens */
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+      gap: 2.5rem;
+      align-items: center;
+    }
+
+    .hero-preview {
+      display: block;
+      padding: 0;
+      background: none;
+      box-shadow: none;
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      width: 100%;
+    }
+
+    .hero-preview:hover {
+      background: none;
+      box-shadow: 0 20px 40px -10px rgba(6, 182, 212, 0.35);
+    }
+
+    .hero-preview img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .hero-preview-caption {
+      position: absolute;
+      right: 0.75rem;
+      bottom: 0.75rem;
+      background: rgba(15, 23, 42, 0.88);
+      color: #e2e8f0;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(6, 182, 212, 0.4);
+    }
+
+    @media (max-width: 960px) {
+      .hero {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    /* "Also useful for" pills */
+    .also-useful {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .also-useful-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #94a3b8;
+      margin-bottom: 0.75rem;
+    }
+
+    .also-useful-list {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.6rem;
+    }
+
+    .also-useful-list li {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      padding: 0.4rem 0.9rem;
+      border-radius: 999px;
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      background: rgba(6, 182, 212, 0.06);
+    }
+
+    /* Change impact checker */
+    .impact-section {
+      margin-bottom: 3rem;
+    }
+
+    .impact-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 0.5rem;
+    }
+
+    .impact-intro {
+      color: #94a3b8;
+      margin-bottom: 2rem;
+    }
+
+    .impact-results:empty {
+      display: none;
+    }
+
+    .impact-results {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(6, 182, 212, 0.1);
+    }
+
+    .impact-summary {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 0.75rem;
+    }
+
+    .req-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .req-chip {
+      font-family: 'Space Mono', ui-monospace, monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #67e8f9;
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+
+    a.req-chip:hover {
+      background: rgba(6, 182, 212, 0.25);
+    }
+
+    .impact-detail {
+      font-size: 0.875rem;
+      color: #94a3b8;
+    }
+
+    .impact-detail h3 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      margin-bottom: 0.5rem;
+    }
+
+    .impact-detail ul {
+      list-style: none;
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .impact-detail code {
+      color: #e2e8f0;
+      font-family: 'Space Mono', ui-monospace, monospace;
+      font-size: 0.8rem;
+    }
+
+    .impact-unmatched {
+      margin-top: 1rem;
+      color: #fbbf24;
+      font-size: 0.875rem;
+    }
+
+    .impact-error {
+      color: #f87171;
+    }
+
     /* How it works */
     .how-it-works {
       margin-bottom: 2rem;
@@ -678,7 +853,8 @@
 </head>
 <body>
   <header>
-    <div class="header-content">
+    <div class="header-content hero">
+      <div class="hero-text">
       <div class="logo">
         <div class="logo-icon" aria-hidden="true">🔍</div>
         <div class="logo-text">
@@ -693,6 +869,14 @@
         </button>
         <span class="hero-note">Free and open source. You can run it locally on your system.</span>
       </div>
+      </div>
+
+      <!-- Clicking the preview generates the same sample report -->
+      <button type="button" class="hero-preview js-sample-report" aria-label="Generate the sample report shown in this preview">
+        <img src="/images/report-preview.png" width="1200" height="750"
+             alt="Sample Trace Matrix report showing requirements, affected files and risk levels">
+        <span class="hero-preview-caption">Click to generate this report</span>
+      </button>
     </div>
   </header>
 
@@ -727,11 +911,11 @@
         <!-- Use Case 1 -->
         <div class="use-case-card">
           <span class="use-case-icon" aria-hidden="true">🎯</span>
-          <div class="use-case-title">Change Request Impact Analysis</div>
+          <div class="use-case-title">Change Impact &amp; Regression Scope</div>
           <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
-          <div class="use-case-description">During release cycles, determining which business requirements are affected by a change request is manual, error-prone, and time-consuming.</div>
+          <div class="use-case-description">Before changing shared code, nobody knows which other features depend on it, so testing is guesswork.</div>
           <div class="use-case-subtitle" style="margin-top: 1rem;"><strong>The Solution:</strong></div>
-          <div class="use-case-description">Automatically identify all impacted requirements and trace breaking changes with confidence across your release pipeline.</div>
+          <div class="use-case-description">See every requirement that has touched the file or method you're changing, and get a concrete list of business requirements to retest before release.</div>
         </div>
 
         <!-- Use Case 2 -->
@@ -741,7 +925,7 @@
           <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
           <div class="use-case-description">No direct references between change requests and implementation across microservices, resulting in vague testing scopes and deployment risks.</div>
           <div class="use-case-subtitle" style="margin-top: 1rem;"><strong>The Solution:</strong></div>
-          <div class="use-case-description">Get complete visibility into which services implement each change, enabling precise testing scope definition and confident deployments.</div>
+          <div class="use-case-description">Analyze all your service repositories together and see exactly which services each change request touched, so testing and deployment cover the right services.</div>
         </div>
 
         <!-- Use Case 3 -->
@@ -757,11 +941,11 @@
         <!-- Use Case 4 -->
         <div class="use-case-card">
           <span class="use-case-icon" aria-hidden="true">🔗</span>
-          <div class="use-case-title">Dependency-Based Development</div>
+          <div class="use-case-title">Building on Earlier Requirements</div>
           <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
           <div class="use-case-description">When developing features on top of previous change requests, manual code review is required for impact determination and timeline estimation.</div>
           <div class="use-case-subtitle" style="margin-top: 1rem;"><strong>The Solution:</strong></div>
-          <div class="use-case-description">Automated impact analysis reveals dependencies and affected areas, accelerating development cycles and reducing surprises.</div>
+          <div class="use-case-description">See which files and methods your new feature shares with earlier requirements, so you can review and estimate the overlap upfront instead of discovering it in testing.</div>
         </div>
 
         <!-- Use Case 5 -->
@@ -771,8 +955,29 @@
           <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
           <div class="use-case-description">Refactoring and technical debt reduction efforts can identify breaking changes, but testing scope remains uncertain and driven by guesswork.</div>
           <div class="use-case-subtitle" style="margin-top: 1rem;"><strong>The Solution:</strong></div>
-          <div class="use-case-description">Define comprehensive testing scopes based on actual business impact, not imaginary blast radius. Refactor with confidence.</div>
+          <div class="use-case-description">Find every requirement that touched the code you're refactoring, and use hotspot analysis to choose what to refactor first and exactly what to retest.</div>
         </div>
+
+        <!-- Use Case 6 -->
+        <div class="use-case-card">
+          <span class="use-case-icon" aria-hidden="true">🛡️</span>
+          <div class="use-case-title">Audit &amp; Compliance Traceability</div>
+          <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
+          <div class="use-case-description">Audits require proof that every requirement can be traced to the code that implements it, and building that matrix by hand takes weeks.</div>
+          <div class="use-case-subtitle" style="margin-top: 1rem;"><strong>The Solution:</strong></div>
+          <div class="use-case-description">Produce a current requirement-to-code traceability matrix straight from your Git history, and export it as HTML, JSON or CSV whenever an auditor asks.</div>
+        </div>
+      </div>
+
+      <div class="also-useful">
+        <h3 class="also-useful-title">Also useful for</h3>
+        <ul class="also-useful-list">
+          <li>Removing a retired feature</li>
+          <li>Incident root cause</li>
+          <li>Commit hygiene KPIs</li>
+          <li>Developer onboarding</li>
+          <li>Vendor delivery verification</li>
+        </ul>
       </div>
 
       <div class="cta-container">
@@ -781,6 +986,45 @@
         </button>
       </div>
     </div>
+
+    <!-- Change Impact Checker -->
+    <section class="card impact-section" id="impactSection" aria-labelledby="impactTitle">
+      <h2 id="impactTitle" class="impact-title">What will my change affect?</h2>
+      <p class="impact-intro">Enter the files or methods you're about to change. You'll get every requirement that has touched them, which is the list to retest before release.</p>
+
+      <form id="impactForm">
+        <div class="config-group">
+          <div class="form-group">
+            <label for="impactRepos">
+              <span class="label-text">Repository URL(s)</span>
+              <span class="label-hint">(required)</span>
+            </label>
+            <textarea id="impactRepos" required aria-describedby="impactReposHelp" placeholder="https://github.com/org/repo.git"></textarea>
+            <div class="helper-text" id="impactReposHelp">Public https:// Git URLs, one per line.</div>
+          </div>
+
+          <div class="form-group">
+            <label for="impactTargets">
+              <span class="label-text">Files or methods you're changing</span>
+              <span class="label-hint">(required)</span>
+            </label>
+            <textarea id="impactTargets" required aria-describedby="impactTargetsHelp" placeholder="PaymentService.cs&#10;Services/OrderService.cs::Refund"></textarea>
+            <div class="helper-text" id="impactTargetsHelp">One per line. Use a file name, a path, or File.cs::MethodName for a single method.</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="impactSubmit" type="submit">
+            <span>Show what to retest</span>
+          </button>
+          <button id="impactSample" type="button" class="btn-sample">
+            <span>Try it on the sample repo</span>
+          </button>
+        </div>
+      </form>
+
+      <div id="impactResults" class="impact-results" aria-live="polite"></div>
+    </section>
 
     <!-- Demo Form Section -->
     <div class="card" id="demoSection">
