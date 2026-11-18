@@ -24,7 +24,7 @@ I ran into this problem while working on enterprise systems. So I built somethin
 - Highlights:
   - high-risk files (touched by multiple requirements)
   - frequently changing areas (hotspots)
-- Generates reports in HTML, JSON, CSV, or Markdown
+- Generates reports in HTML, JSON, CSV, or Markdown (multi-repository HTML reports are grouped into one collapsible section per repository, riskiest first)
 - Can also run as a small web service with REST APIs
 
 ## Integration with Project Management Tools

@@ -102,28 +102,10 @@ namespace Scalpel.Enterprise
             var commitTableRows = commitRows + hiddenCommitRows;
             var seeMoreCommitsBtn = totalCommits > visibleCommits ? $"<tr><td colspan='2' style='text-align:center; padding: 1rem;'><button onclick='toggleCommitRows(event)' class='see-more-btn' data-state='hidden'>See More ({totalCommits - visibleCommits} more)</button></td></tr>" : "";
 
-            // Generate file rows
-            var fileRows = string.Join("", analysis.FileToRequirements
-                .OrderByDescending(f => f.Value.Count)
-                .Select(kvp => {
-                    var reqs = kvp.Value.ToList();
-                    var riskLevel = GetRiskLevel(reqs.Count);
-                    var badgesHtml = GenerateBadgeHtml(reqs, ticketData);
-                    return $"<tr class='file-row' data-risk='{GetRiskNumericValue(reqs.Count)}'><td class='file-name'>{EscapeHtml(kvp.Key)}</td><td>{badgesHtml}</td><td class='risk-cell'>{riskLevel}</td></tr>";
-                }));
-
-            // Generate method rows (limited to first 30)
-            var methodRows = string.Join("", (analysis.MethodToRequirements ?? new Dictionary<string, MethodInfo>())
-                .OrderByDescending(m => m.Value.ChangeCount)
-                .Take(30)
-                .Select(kvp => {
-                    var method = kvp.Value;
-                    var methodName = method.MethodName;
-                    var fileName = Path.GetFileName(method.FilePath);
-                    var reqs = method.Requirements?.ToList() ?? new List<string>();
-                    var badgesHtml = GenerateBadgeHtml(reqs, ticketData);
-                    return $"<tr class='method-row'><td class='method-name'>{EscapeHtml(methodName)}</td><td class='file-ref'>{EscapeHtml(fileName)}</td><td class='lines'>{method.LineStart} - {method.LineEnd}</td><td class='changes'>{method.ChangeCount}</td><td>{badgesHtml}</td></tr>";
-                }));
+            // Files and methods: one collapsible section per repository (service) when several were
+            // analysed, otherwise a single flat table.
+            var filesSectionHtml = BuildFilesSection(analysis, ticketData);
+            var methodsSectionHtml = BuildMethodsSection(analysis, ticketData);
 
             var repoPath = analysis.RepositoryPath ?? (analysis.RepositoryPaths?.FirstOrDefault() ?? "Not Provided");
 
@@ -600,6 +582,102 @@ namespace Scalpel.Enterprise
             background: rgba(245, 158, 11, 0.08) !important;
         }}
 
+        /* Repository (service) groups */
+        .group-toolbar {{
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }}
+
+        .group-toolbar button {{
+            background: transparent;
+            color: var(--slate-300, #cbd5e1);
+            border: 1px solid rgba(6, 182, 212, 0.35);
+            border-radius: 6px;
+            padding: 0.35rem 0.8rem;
+            font: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }}
+
+        .group-toolbar button:hover {{
+            background: rgba(6, 182, 212, 0.12);
+        }}
+
+        details.repo-group {{
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }}
+
+        details.repo-group > summary {{
+            list-style: none;
+            cursor: pointer;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem 1rem;
+            padding: 0.9rem 1.1rem;
+            background: rgba(6, 182, 212, 0.07);
+        }}
+
+        details.repo-group > summary::-webkit-details-marker {{
+            display: none;
+        }}
+
+        details.repo-group > summary::before {{
+            content: '\25B8';
+            color: #67e8f9;
+            transition: transform 0.2s ease;
+        }}
+
+        details.repo-group[open] > summary::before {{
+            transform: rotate(90deg);
+        }}
+
+        details.repo-group > summary:focus-visible {{
+            outline: 3px solid #67e8f9;
+            outline-offset: -3px;
+        }}
+
+        .repo-name {{
+            font-weight: 700;
+            color: #e2e8f0;
+            font-size: 1rem;
+        }}
+
+        .repo-stats {{
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }}
+
+        .risk-pill {{
+            margin-left: auto;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.2rem 0.65rem;
+            border-radius: 999px;
+            border: 1px solid currentColor;
+        }}
+
+        .risk-pill.risk-6 {{ color: #f87171; }}
+        .risk-pill.risk-4 {{ color: #fb923c; }}
+        .risk-pill.risk-3 {{ color: #fbbf24; }}
+        .risk-pill.risk-1 {{ color: #34d399; }}
+        .risk-pill.risk-0 {{ color: #94a3b8; }}
+
+        details.repo-group table {{
+            margin: 0;
+        }}
+
+        .group-note {{
+            color: #94a3b8;
+            font-size: 0.8rem;
+            padding: 0.6rem 1.1rem;
+        }}
+
         .risk-cell {{
             font-weight: 700;
             text-align: center;
@@ -662,6 +740,56 @@ namespace Scalpel.Enterprise
         }}
 
         /* ====== RESPONSIVE ====== */
+        /* Phones: file and method rows become stacked blocks so names never break mid-word */
+        @media (max-width: 640px) {{
+            table:has(tr.file-row) thead,
+            table:has(tr.method-row) thead {{
+                display: none;
+            }}
+
+            tr.file-row,
+            tr.method-row {{
+                display: grid;
+                grid-template-columns: repeat(3, auto) 1fr;
+                gap: 0.35rem 1rem;
+                align-items: center;
+                padding: 0.9rem 1rem;
+                border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+            }}
+
+            tr.file-row td,
+            tr.method-row td {{
+                padding: 0;
+                border: none;
+                text-align: left;
+            }}
+
+            tr.file-row td.file-name,
+            tr.method-row td.method-name,
+            tr.method-row td.file-ref {{
+                grid-column: 1 / -1;
+                word-break: normal;
+                overflow-wrap: anywhere;
+            }}
+
+            tr.file-row td.reqs-cell,
+            tr.method-row td.reqs-cell {{
+                grid-column: 1 / -1;
+            }}
+
+            tr.file-row td[data-label]::before,
+            tr.method-row td[data-label]::before {{
+                content: attr(data-label);
+                display: block;
+                font-size: 0.7rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: #94a3b8;
+                margin-bottom: 0.2rem;
+            }}
+        }}
+
         @media (max-width: 768px) {{
             .container {{
                 padding: 1.5rem;
@@ -782,18 +910,7 @@ namespace Scalpel.Enterprise
         <div class='card'>
             <h2>📁 Files to Requirements</h2>
             <p style='color: var(--slate-400); margin-bottom: 1rem; font-size: 0.9rem; font-weight: 500;'>Source files mapped to their requirements and risk levels</p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>File Path</th>
-                        <th>Requirements</th>
-                        <th>Risk Level</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {fileRows}
-                </tbody>
-            </table>
+            {filesSectionHtml}
         </div>
 
         <!-- PM Integration Section (if tickets available) -->
@@ -826,20 +943,7 @@ namespace Scalpel.Enterprise
         <div class='card'>
             <h2>⚙️ Method Traceability</h2>
             <p style='color: var(--slate-400); margin-bottom: 1rem; font-size: 0.9rem; font-weight: 500;'>Methods tracked by requirements with change history</p>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Method Name</th>
-                        <th>File</th>
-                        <th>Lines</th>
-                        <th>Changes</th>
-                        <th>Requirements</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {methodRows}
-                </tbody>
-            </table>
+            {methodsSectionHtml}
         </div>
 
         <!-- Metadata -->
@@ -876,6 +980,12 @@ namespace Scalpel.Enterprise
                 this.style.boxShadow = 'none';
             }});
         }});
+
+        // Expand or collapse every repository section in one table
+        function setRepoGroups(btn, open) {{
+            var card = btn.closest('.card');
+            card.querySelectorAll('details.repo-group').forEach(function (d) {{ d.open = open; }});
+        }}
 
         // Expand badge details
         function expandBadges(btn) {{
@@ -917,6 +1027,135 @@ namespace Scalpel.Enterprise
     </script>
 </body>
 </html>";
+        }
+
+        private const int MaxMethodsPerTable = 30;
+
+        /// <summary>
+        /// Splits "{repo}/{path}" into its repository name and repository-relative path.
+        /// Returns null as the repository when the path has no known prefix.
+        /// </summary>
+        internal static (string? repository, string relativePath) SplitRepository(string path, IReadOnlyList<string> repositoryNames)
+        {
+            foreach (var name in repositoryNames.OrderByDescending(n => n.Length))
+            {
+                if (path.StartsWith(name + "/", StringComparison.Ordinal))
+                    return (name, path.Substring(name.Length + 1));
+            }
+            return (null, path);
+        }
+
+        private static bool IsGrouped(AnalysisResult analysis) => (analysis.RepositoryNames?.Count ?? 0) > 1;
+
+        /// <summary>Single-repository reports drop the redundant "{repo}/" prefix from paths.</summary>
+        private static string DisplayPath(AnalysisResult analysis, string path) =>
+            analysis.RepositoryNames?.Count == 1 ? SplitRepository(path, analysis.RepositoryNames).relativePath : path;
+
+        private string FileRowHtml(string displayPath, ICollection<string> requirements, Dictionary<string, PMTicket> ticketData)
+        {
+            var reqs = requirements.ToList();
+            // data-label is shown as a caption when rows are stacked on narrow screens
+            return $"<tr class='file-row' data-risk='{GetRiskNumericValue(reqs.Count)}'><td class='file-name'>{EscapeHtml(displayPath)}</td>" +
+                   $"<td class='reqs-cell' data-label='Requirements'>{GenerateBadgeHtml(reqs, ticketData)}</td><td class='risk-cell' data-label='Risk'>{GetRiskLevel(reqs.Count)}</td></tr>";
+        }
+
+        private string MethodRowHtml(MethodInfo method, Dictionary<string, PMTicket> ticketData)
+        {
+            var reqs = method.Requirements?.ToList() ?? new List<string>();
+            return $"<tr class='method-row'><td class='method-name'>{EscapeHtml(method.MethodName)}</td><td class='file-ref'>{EscapeHtml(Path.GetFileName(method.FilePath))}</td>" +
+                   $"<td class='lines' data-label='Lines'>{method.LineStart} - {method.LineEnd}</td><td class='changes' data-label='Changes'>{method.ChangeCount}</td>" +
+                   $"<td class='reqs-cell' data-label='Requirements'>{GenerateBadgeHtml(reqs, ticketData)}</td></tr>";
+        }
+
+        private static string FileTableHtml(string rows) =>
+            "<table><thead><tr><th>File Path</th><th>Requirements</th><th>Risk Level</th></tr></thead>" +
+            $"<tbody>{rows}</tbody></table>";
+
+        private static string MethodTableHtml(string rows) =>
+            "<table><thead><tr><th>Method Name</th><th>File</th><th>Lines</th><th>Changes</th><th>Requirements</th></tr></thead>" +
+            $"<tbody>{rows}</tbody></table>";
+
+        private const string GroupToolbarHtml =
+            "<div class='group-toolbar'>" +
+            "<button type='button' onclick='setRepoGroups(this, true)'>Expand all</button>" +
+            "<button type='button' onclick='setRepoGroups(this, false)'>Collapse all</button></div>";
+
+        private string GroupHtml(string repository, string stats, int highestRequirementCount, string tableHtml, string? note = null) =>
+            "<details class='repo-group' open><summary>" +
+            $"<span class='repo-name'>{EscapeHtml(repository)}</span>" +
+            $"<span class='repo-stats'>{EscapeHtml(stats)}</span>" +
+            $"<span class='risk-pill risk-{GetRiskNumericValue(highestRequirementCount)}'>Highest risk: {GetRiskLevel(highestRequirementCount)}</span>" +
+            $"</summary>{tableHtml}{(note != null ? $"<div class='group-note'>{EscapeHtml(note)}</div>" : "")}</details>";
+
+        private string BuildFilesSection(AnalysisResult analysis, Dictionary<string, PMTicket> ticketData)
+        {
+            var files = analysis.FileToRequirements ?? new Dictionary<string, HashSet<string>>();
+
+            if (!IsGrouped(analysis))
+            {
+                return FileTableHtml(string.Join("", files
+                    .OrderByDescending(f => f.Value.Count)
+                    .Select(f => FileRowHtml(DisplayPath(analysis, f.Key), f.Value, ticketData))));
+            }
+
+            var groups = files
+                .Select(f => (split: SplitRepository(f.Key, analysis.RepositoryNames), reqs: f.Value))
+                .GroupBy(f => f.split.repository ?? "Other")
+                .Select(g => new
+                {
+                    Name = g.Key,
+                    Files = g.OrderByDescending(f => f.reqs.Count).ThenBy(f => f.split.relativePath, StringComparer.OrdinalIgnoreCase).ToList(),
+                    Highest = g.Max(f => f.reqs.Count),
+                    Requirements = g.SelectMany(f => f.reqs).Distinct().Count()
+                })
+                // Riskiest service first, so the overall "what is most at risk" view is kept.
+                .OrderByDescending(g => g.Highest).ThenByDescending(g => g.Files.Count).ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (groups.Count == 0)
+                return FileTableHtml("");
+
+            return GroupToolbarHtml + string.Join("", groups.Select(g =>
+                GroupHtml(
+                    g.Name,
+                    $"{g.Files.Count} file{(g.Files.Count == 1 ? "" : "s")} · {g.Requirements} requirement{(g.Requirements == 1 ? "" : "s")}",
+                    g.Highest,
+                    FileTableHtml(string.Join("", g.Files.Select(f => FileRowHtml(f.split.relativePath, f.reqs, ticketData)))))));
+        }
+
+        private string BuildMethodsSection(AnalysisResult analysis, Dictionary<string, PMTicket> ticketData)
+        {
+            var methods = (analysis.MethodToRequirements ?? new Dictionary<string, MethodInfo>()).Values.ToList();
+
+            if (!IsGrouped(analysis) || methods.Count == 0)
+            {
+                return MethodTableHtml(string.Join("", methods
+                    .OrderByDescending(m => m.ChangeCount)
+                    .Take(MaxMethodsPerTable)
+                    .Select(m => MethodRowHtml(m, ticketData))));
+            }
+
+            var groups = methods
+                .GroupBy(m => SplitRepository(m.FilePath ?? "", analysis.RepositoryNames).repository ?? "Other")
+                .Select(g => new
+                {
+                    Name = g.Key,
+                    Methods = g.OrderByDescending(m => m.ChangeCount).ToList(),
+                    Highest = g.Max(m => m.Requirements?.Count ?? 0),
+                    Requirements = g.SelectMany(m => m.Requirements ?? new HashSet<string>()).Distinct().Count()
+                })
+                .OrderByDescending(g => g.Highest).ThenByDescending(g => g.Methods.Count).ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return GroupToolbarHtml + string.Join("", groups.Select(g =>
+                GroupHtml(
+                    g.Name,
+                    $"{g.Methods.Count} method{(g.Methods.Count == 1 ? "" : "s")} · {g.Requirements} requirement{(g.Requirements == 1 ? "" : "s")}",
+                    g.Highest,
+                    MethodTableHtml(string.Join("", g.Methods.Take(MaxMethodsPerTable).Select(m => MethodRowHtml(m, ticketData)))),
+                    g.Methods.Count > MaxMethodsPerTable
+                        ? $"Showing the {MaxMethodsPerTable} most-changed of {g.Methods.Count} methods. The JSON export has all of them."
+                        : null)));
         }
 
         private string GenerateBadgeHtml(List<string> reqs, Dictionary<string, PMTicket>? ticketData = null)

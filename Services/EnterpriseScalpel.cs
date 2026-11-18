@@ -1297,6 +1297,7 @@ namespace Scalpel.Enterprise
                     candidate = $"{repoPrefix}-{n}";
                 }
                 repoPrefix = candidate;
+                mergedAnalysis.RepositoryNames.Add(repoPrefix);
                 foreach (var (commit, reqs) in result.CommitToRequirements)
                 {
                     var key = $"{repoPrefix}:{commit}";
