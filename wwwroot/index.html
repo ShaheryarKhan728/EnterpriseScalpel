@@ -40,6 +40,10 @@
       color: #e2e8f0;
       line-height: 1.6;
       min-height: 100vh;
+      /* Override legacy styles.css (body padding: 40px), which caused horizontal overflow on phones */
+      margin: 0;
+      padding: 0;
+      overflow-wrap: anywhere;
     }
 
     /* Header */
@@ -186,7 +190,7 @@
     .label-hint {
       font-size: 0.8rem;
       font-weight: 400;
-      color: #64748b;
+      color: #94a3b8;
       margin-left: 0.5rem;
     }
 
@@ -224,7 +228,7 @@
     }
 
     textarea::placeholder {
-      color: #475569;
+      color: #7b8aa0;
     }
 
     select {
@@ -265,9 +269,10 @@
       border-top: 1px solid rgba(6, 182, 212, 0.1);
     }
 
+    /* Darker cyan so white button text meets WCAG AA contrast (4.5:1) */
     button {
       padding: 0.875rem 2rem;
-      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+      background: linear-gradient(135deg, #0e7490 0%, #155e75 100%);
       color: white;
       border: none;
       border-radius: 8px;
@@ -282,9 +287,14 @@
     }
 
     button:hover {
-      background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+      background: linear-gradient(135deg, #155e75 0%, #164e63 100%);
       box-shadow: 0 15px 35px -5px rgba(6, 182, 212, 0.4);
       transform: translateY(-2px);
+    }
+
+    button:focus-visible {
+      outline: 3px solid #67e8f9;
+      outline-offset: 3px;
     }
 
     button:active {
@@ -299,9 +309,106 @@
       box-shadow: none;
     }
 
-    #sampleRepo:hover {
+    /* "Generate a sample report" buttons share one style */
+    .btn-sample {
       background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.3);
+    }
+
+    .btn-sample:hover {
+      background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%);
       box-shadow: 0 15px 35px -5px rgba(139, 92, 246, 0.4);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .hero-actions .hero-note {
+      font-size: 0.9rem;
+      color: #94a3b8;
+    }
+
+    .hero-actions .hero-note a {
+      color: #67e8f9;
+    }
+
+    /* How it works */
+    .how-it-works {
+      margin-bottom: 2rem;
+    }
+
+    .how-it-works h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .steps {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+      gap: 1.5rem;
+      counter-reset: step;
+    }
+
+    .steps li {
+      counter-increment: step;
+      position: relative;
+      padding-left: 3rem;
+    }
+
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 2.1rem;
+      height: 2.1rem;
+      border-radius: 50%;
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      color: #67e8f9;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .steps h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 0.35rem;
+    }
+
+    .steps p {
+      font-size: 0.875rem;
+      color: #94a3b8;
+    }
+
+    .steps code {
+      font-family: 'Space Mono', ui-monospace, monospace;
+      font-size: 0.8rem;
+      color: #67e8f9;
+      background: rgba(6, 182, 212, 0.1);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
     }
 
     /* Loader Styles */
@@ -374,7 +481,7 @@
 
     #status.error {
       background: rgba(239, 68, 68, 0.15);
-      color: #ef4444;
+      color: #f87171;
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
@@ -393,7 +500,7 @@
     /* Helper Text */
     .helper-text {
       font-size: 0.825rem;
-      color: #64748b;
+      color: #94a3b8;
       margin-top: 0.5rem;
       display: flex;
       align-items: flex-start;
@@ -427,7 +534,7 @@
 
     .use-cases-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
       gap: 1.5rem;
       margin-bottom: 2rem;
     }
@@ -519,22 +626,29 @@
       margin-top: 3rem;
     }
 
+    /* Centred by inline-flex (buttons are flex/block by default, which text-align can't centre) */
     #requestDemoBtn {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.3);
-      padding: 1rem 19rem;
+      display: inline-flex;
+      justify-content: center;
+      padding: 1rem 2.5rem;
       font-size: 1rem;
     }
 
-    #requestDemoBtn:hover {
-      background: linear-gradient(135deg, #059669 0%, #047857 100%);
-      box-shadow: 0 15px 35px -5px rgba(16, 185, 129, 0.4);
+    /* Responsive */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition: none !important;
+        animation-duration: 3s !important;
+      }
+      button:hover, .use-case-card:hover {
+        transform: none;
+      }
     }
 
-    /* Responsive */
     @media (max-width: 768px) {
+      /* Bottom padding must exceed the -2rem overlap of .main-container below */
       header {
-        padding: 2rem 1.5rem;
+        padding: 2rem 1.5rem 4rem;
       }
 
       .logo-text h1 {
@@ -566,17 +680,42 @@
   <header>
     <div class="header-content">
       <div class="logo">
-        <div class="logo-icon">🔍</div>
+        <div class="logo-icon" aria-hidden="true">🔍</div>
         <div class="logo-text">
           <h1>Trace Matrix</h1>
           <p>Code Traceability &amp; Impact Analysis</p>
         </div>
       </div>
       <p>Point it at any Git repo. Get a full requirement traceability matrix. Works with Jira, ClickUp, and Azure DevOps. <strong style="color: #06b6d4;">C# codebases only.</strong></p>
+      <div class="hero-actions">
+        <button id="heroSampleBtn" type="button" class="btn-sample js-sample-report">
+          <span>Generate a sample report</span>
+        </button>
+        <span class="hero-note">Free and open source. You can run it locally on your system.</span>
+      </div>
     </div>
   </header>
 
   <main class="main-container">
+    <!-- How It Works -->
+    <section class="card how-it-works" aria-labelledby="howItWorksTitle">
+      <h2 id="howItWorksTitle">How it works</h2>
+      <ol class="steps">
+        <li>
+          <h3>Tag your commits</h3>
+          <p>Include the requirement ID in each commit message, e.g. <code>REQ-123 Add refund flow</code>.</p>
+        </li>
+        <li>
+          <h3>Point it at your repositories</h3>
+          <p>Add one or more Git repository URLs, across all the services that make up your product.</p>
+        </li>
+        <li>
+          <h3>Get your traceability matrix</h3>
+          <p>See every file and method each requirement changed, which files are shared between requirements, and links to each task in your PM tool.</p>
+        </li>
+      </ol>
+    </section>
+
     <!-- Use Cases Section -->
     <div class="card use-cases-section">
       <div class="use-cases-header">
@@ -587,7 +726,7 @@
       <div class="use-cases-grid">
         <!-- Use Case 1 -->
         <div class="use-case-card">
-          <span class="use-case-icon">🎯</span>
+          <span class="use-case-icon" aria-hidden="true">🎯</span>
           <div class="use-case-title">Change Request Impact Analysis</div>
           <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
           <div class="use-case-description">During release cycles, determining which business requirements are affected by a change request is manual, error-prone, and time-consuming.</div>
@@ -597,7 +736,7 @@
 
         <!-- Use Case 2 -->
         <div class="use-case-card">
-          <span class="use-case-icon">🏗️</span>
+          <span class="use-case-icon" aria-hidden="true">🏗️</span>
           <div class="use-case-title">Microservices Architecture Visibility</div>
           <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
           <div class="use-case-description">No direct references between change requests and implementation across microservices, resulting in vague testing scopes and deployment risks.</div>
@@ -607,7 +746,7 @@
 
         <!-- Use Case 3 -->
         <div class="use-case-card">
-          <span class="use-case-icon">📊</span>
+          <span class="use-case-icon" aria-hidden="true">📊</span>
           <div class="use-case-title">Business Operation Tracking</div>
           <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
           <div class="use-case-description">Finding what actual business operations use changed code requires deep domain knowledge and manual investigation.</div>
@@ -617,7 +756,7 @@
 
         <!-- Use Case 4 -->
         <div class="use-case-card">
-          <span class="use-case-icon">🔗</span>
+          <span class="use-case-icon" aria-hidden="true">🔗</span>
           <div class="use-case-title">Dependency-Based Development</div>
           <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
           <div class="use-case-description">When developing features on top of previous change requests, manual code review is required for impact determination and timeline estimation.</div>
@@ -627,7 +766,7 @@
 
         <!-- Use Case 5 -->
         <div class="use-case-card">
-          <span class="use-case-icon">♻️</span>
+          <span class="use-case-icon" aria-hidden="true">♻️</span>
           <div class="use-case-title">Refactoring &amp; Technical Debt</div>
           <div class="use-case-subtitle"><strong>The Challenge:</strong></div>
           <div class="use-case-description">Refactoring and technical debt reduction efforts can identify breaking changes, but testing scope remains uncertain and driven by guesswork.</div>
@@ -637,8 +776,8 @@
       </div>
 
       <div class="cta-container">
-        <button id="requestDemoBtn" type="button">
-          <span>🚀 I Want a Demo</span>
+        <button id="requestDemoBtn" type="button" class="btn-sample js-sample-report">
+          <span>Generate a sample report</span>
         </button>
       </div>
     </div>
@@ -648,7 +787,7 @@
       <form id="reportForm">
         <!-- Requirements Section -->
         <div class="form-section">
-          <h2 class="section-title">📋 Requirements</h2>
+          <h2 class="section-title"><span aria-hidden="true">📋</span> Requirements</h2>
           <div class="form-group">
             <label for="reqs">
               <span class="label-text">Requirement IDs</span>
@@ -663,23 +802,23 @@
 
         <!-- Repository Section -->
         <div class="form-section">
-          <h2 class="section-title">💾 Source Code</h2>
+          <h2 class="section-title"><span aria-hidden="true">💾</span> Source Code</h2>
           <div class="form-group">
             <label for="repos">
               <span class="label-text">Repository URL(s)</span>
               <span class="label-hint">(required)</span>
             </label>
-            <textarea id="repos" required placeholder="https://github.com/org/repo.git&#10;"></textarea>
-            <!-- <div class="helper-text">Leave empty to analyze the current repository. Supports GitHub URLs and local paths</div> -->
+            <textarea id="repos" required aria-describedby="reposHelp" placeholder="https://github.com/org/repo.git&#10;"></textarea>
+            <div class="helper-text" id="reposHelp">Public https:// Git URLs (GitHub, GitLab, Bitbucket, Azure DevOps), one per line or comma separated.</div>
           </div>
 
           <div class="form-group">
             <label for="pattern">
               <span class="label-text">Requirement Pattern</span>
-              <span class="label-hint">(regex)</span>
+              <span class="label-hint">(optional regex)</span>
             </label>
-            <textarea id="pattern" required placeholder="(?i)REQ-\d+"></textarea>
-            <div class="helper-text">Regular expression to identify requirement IDs in code. Examples: (?i)Req-\d+, REQ-, JIRA-\d+</div>
+            <textarea id="pattern" aria-describedby="patternHelp" placeholder="(?i)REQ-\d+"></textarea>
+            <div class="helper-text" id="patternHelp">Regular expression that finds requirement IDs in commit messages. Leave empty to use the default (?i)REQ-\d+. Examples: (?i)PSW-\d+, JIRA-\d+</div>
           </div>
         </div>
 
@@ -687,18 +826,18 @@
 
         <!-- Output Section -->
         <div class="form-section">
-          <h2 class="section-title">⚙️ Output &amp; Integration</h2>
+          <h2 class="section-title"><span aria-hidden="true">⚙️</span> Output &amp; Integration</h2>
           <div class="config-group">
             <div class="form-group">
               <label for="format">
                 <span class="label-text">Output Format</span>
               </label>
-              <select id="format" required>
-                <option value="html">📊 HTML Report (interactive)</option>
-                <option value="json">{ } JSON (data export)</option>
-                <option value="csv">📈 CSV (spreadsheet)</option>
+              <select id="format" required aria-describedby="formatHelp">
+                <option value="html">HTML report (interactive)</option>
+                <option value="json">JSON (data export)</option>
+                <option value="csv">CSV (spreadsheet)</option>
               </select>
-              <div class="helper-text">HTML opens in a new tab. JSON/CSV are downloaded</div>
+              <div class="helper-text" id="formatHelp">The report is downloaded as a file. Open the HTML report in any browser.</div>
             </div>
 
             <div class="form-group">
@@ -706,13 +845,13 @@
                 <span class="label-text">PM Platform</span>
                 <span class="label-hint">(optional)</span>
               </label>
-              <select id="pmPlatform">
-                <option value="">None — Skip Integration</option>
-                <option value="jira">🔵 JIRA</option>
-                <option value="clickup">✓ ClickUp</option>
-                <option value="azuredevops">⬛ Azure DevOps</option>
+              <select id="pmPlatform" aria-describedby="pmHelp">
+                <option value="">None (skip integration)</option>
+                <option value="jira">Jira</option>
+                <option value="clickup">ClickUp</option>
+                <option value="azuredevops">Azure DevOps</option>
               </select>
-              <div class="helper-text">Enrich report with ticket data and requirements</div>
+              <div class="helper-text" id="pmHelp">Makes every requirement ID in the report a link to its task</div>
             </div>
           </div>
         </div>
@@ -722,32 +861,26 @@
           <button id="generate" type="submit">
             <span>Generate Report</span>
           </button>
-          <button id="sampleRepo" type="button" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.3);">
-            <span>🚀 Try with Sample Repo</span>
+          <button id="sampleRepo" type="button" class="btn-sample js-sample-report">
+            <span>Generate a sample report</span>
           </button>
-          <span id="status" class="status"></span>
+          <span id="status" class="status" role="status" aria-live="polite"></span>
         </div>
 
-        <p class="note"><strong>💡 Demo:</strong> Click "Try with Sample Repo" to see the tool in action with our sample repository. Supports C# codebases only.</p>
+        <p class="note"><span><strong>Demo:</strong> Click "Generate a sample report" to see the tool in action on our own repository. Method-level tracing supports C# codebases.</span></p>
       </form>
     </div>
   </main>
 
   <!-- Loader -->
-  <div class="loader-container" id="loaderContainer">
-    <div class="loader-content">
+  <div class="loader-container" id="loaderContainer" aria-hidden="true">
+    <div class="loader-content" role="status" aria-live="assertive">
       <div class="spinner"></div>
       <div class="loader-text">Generating Report...</div>
       <div class="loader-subtext">Analyzing your repository</div>
     </div>
   </div>
 
-  <script>
-    // Scroll to demo section
-    document.getElementById('requestDemoBtn').addEventListener('click', function() {
-      document.getElementById('sampleRepo').scrollIntoView({ behavior: 'smooth' });
-    });
-  </script>
   <script src="/app.js"></script>
 </body>
 </html>

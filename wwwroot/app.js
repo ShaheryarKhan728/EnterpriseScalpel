@@ -1,131 +1,101 @@
-async function postGenerate(body) {
-  const res = await fetch('/api/generate-report', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  return res;
+// Must match SampleRepository / SampleRequirementId in scalpel.config.json so the
+// server can answer from its pre-generated sample report.
+const SAMPLE_REQUEST = {
+  requirementIds: ['REQ-123'],
+  repositories: ['https://github.com/ShaheryarKhan728/EnterpriseScalpel'],
+  format: 'html',
+  requirementPattern: '(?i)REQ-\\d+',
+  pmPlatform: 'clickup'
+};
+
+const statusEl = document.getElementById('status');
+const loaderEl = document.getElementById('loaderContainer');
+const form = document.getElementById('reportForm');
+const allActionButtons = () => document.querySelectorAll('#generate, .js-sample-report');
+
+function setStatus(type, message) {
+  statusEl.classList.remove('loading', 'success', 'error');
+  if (type) statusEl.classList.add(type);
+  statusEl.textContent = message || '';
 }
 
-// Handle sample repo button click
-document.getElementById('sampleRepo').addEventListener('click', async (e) => {
-  e.preventDefault();
-  const sampleData = {
-    requirementIds: ['REQ-123'],
-    repositories: ['https://github.com/ShaheryarKhan728/EnterpriseScalpel'],
-    format: 'html',
-    requirementPattern: '(?i)REQ-\\d+',
-    pmPlatform: 'clickup'
-  };
-  
-  // Get button, status, and loader elements
-  const sampleBtn = document.getElementById('sampleRepo');
-  const status = document.getElementById('status');
-  const loader = document.getElementById('loaderContainer');
-  
-  // Disable button and show loader
-  sampleBtn.disabled = true;
-  loader.classList.add('active');
+// One busy state for every action: full-screen loader + all action buttons disabled.
+function setBusy(busy) {
+  loaderEl.classList.toggle('active', busy);
+  loaderEl.setAttribute('aria-hidden', busy ? 'false' : 'true');
+  document.body.setAttribute('aria-busy', busy ? 'true' : 'false');
+  allActionButtons().forEach(b => { b.disabled = busy; });
+}
 
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function filenameFor(res, format, fallbackBase) {
+  const disposition = res.headers.get('content-disposition');
+  const fromHeader = disposition ? (disposition.split('filename=')[1] || '') : '';
+  const cleaned = fromHeader.replace(/[^a-zA-Z0-9._-]/g, '');
+  return cleaned || `${fallbackBase}.${format}`;
+}
+
+async function generateReport(body, fallbackBase) {
+  setBusy(true);
+  setStatus('loading', 'Generating report…');
   try {
-    const res = await postGenerate(sampleData);
+    const res = await fetch('/api/generate-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
 
     if (!res.ok) {
       const text = await res.text();
-      status.textContent = 'Error: ' + text.substring(0, 200);
-      status.classList.add('error');
-      status.classList.remove('loading');
-      sampleBtn.disabled = false;
-      loader.classList.remove('active');
+      setStatus('error', 'Error: ' + text.substring(0, 200));
+      statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
-    const text = await res.text();
-    const blob = new Blob([text], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'traceability-report-sample.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    status.textContent = '✅ Downloaded sample report';
-    status.classList.remove('loading', 'error');
-    status.classList.add('success');
+    const format = (body.format || 'json').toLowerCase();
+    const blob = await res.blob();
+    const filename = filenameFor(res, format, fallbackBase);
+    downloadBlob(blob, filename);
+    setStatus('success', 'Downloaded ' + filename);
   } catch (err) {
-    status.textContent = 'Error: ' + err.message;
-    status.classList.add('error');
-    status.classList.remove('loading');
-    sampleBtn.disabled = false;
+    setStatus('error', 'Error: ' + err.message);
+    statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } finally {
-    loader.classList.remove('active');
+    setBusy(false);
   }
+}
+
+// Every "Generate a sample report" button (hero, below the use cases, and in the form).
+document.querySelectorAll('.js-sample-report').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.preventDefault();
+    generateReport(SAMPLE_REQUEST, 'traceability-report-sample');
+  });
 });
 
-document.getElementById('generate').addEventListener('click', async () => {
-  const btn = document.getElementById('generate');
-  const status = document.getElementById('status');
-  btn.disabled = true; status.textContent = 'Working...';
+// Handle the form's submit event (not the button click) so the browser never
+// performs a real form submission that reloads the page mid-request.
+form.addEventListener('submit', e => {
+  e.preventDefault();
 
-  const reqsRaw = document.getElementById('reqs').value.trim();
-  const reposRaw = document.getElementById('repos').value.trim();
-  const format = document.getElementById('format').value;
-  const requirementPattern = document.getElementById('pattern')?.value?.trim();
-  const pmPlatform = document.getElementById('pmPlatform').value || null;
+  const split = raw => raw ? raw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [];
+  const body = {
+    requirementIds: split(document.getElementById('reqs').value.trim()),
+    repositories: split(document.getElementById('repos').value.trim()),
+    format: document.getElementById('format').value,
+    requirementPattern: document.getElementById('pattern').value.trim() || null,
+    pmPlatform: document.getElementById('pmPlatform').value || null
+  };
 
-  const requirementIds = reqsRaw ? reqsRaw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [];
-  const repositories = reposRaw ? reposRaw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean) : [];
-
-  try {
-    const res = await postGenerate({ requirementIds, repositories, format, requirementPattern, pmPlatform });
-
-    if (!res.ok) {
-      const text = await res.text();
-      status.textContent = 'Error: ' + text.substring(0, 200);
-      btn.disabled = false; return;
-    }
-
-    if (format === 'html') {
-      const text = await res.text();
-      const blob = new Blob([text], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      
-      // Create a hidden link and trigger download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'traceability-report.html'; // Forces download instead of opening
-      document.body.appendChild(a);
-      a.click();
-      
-      // Clean up
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      status.textContent = 'Downloaded HTML report';
-
-      // const text = await res.text();
-      // const blob = new Blob([text], { type: 'text/html' });
-      // const url = URL.createObjectURL(blob);
-      // window.open(url, '_blank');
-      // status.textContent = 'Opened report in new tab';
-    } else if (format === 'json' || format === 'csv') {
-      const blob = await res.blob();
-      const ok = res.headers.get('content-disposition');
-      const filename = ok ? ok.split('filename=')[1] || 'report' : (format === 'json' ? 'traceability-report.json' : 'traceability-report.csv');
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = filename.replace(/[^a-zA-Z0-9._-]/g,'');
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      status.textContent = 'Downloaded ' + a.download;
-    }
-  } catch (err) {
-    status.textContent = 'Error: ' + err.message;
-  } finally {
-    btn.disabled = false;
-  }
+  generateReport(body, 'traceability-report');
 });
